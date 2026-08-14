@@ -557,6 +557,44 @@ export async function runAgentEngine(input: AgentRequest): Promise<AgentResponse
     };
   }
 
+  // Direct Google Gemini API Integration Call (if GEMINI_API_KEY is configured)
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey && apiKey.length > 10 && !apiKey.includes('your_gemini_api_key')) {
+    try {
+      const sysPrompt = domain === 'medical'
+        ? 'You are a professional Clinical AI Assistant. Provide helpful, accurate, empathetic medical customer service information. Remind users to call 911 for emergencies.'
+        : 'You are a helpful Customer Support AI Assistant for an e-commerce platform. Provide polite, clear customer service assistance.';
+
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${sysPrompt}\n\nUser Question: ${rawMsg}` }] }],
+        }),
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (geminiRes.ok) {
+        const geminiData = await geminiRes.json();
+        const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (generatedText) {
+          return {
+            conversation_id: conversationId,
+            intent: 'Google Gemini Response',
+            response: generatedText.trim(),
+            escalated: false,
+            ticket_id: null,
+            tools_used: [...toolsUsed, 'google_gemini_1.5_flash'],
+            domain,
+            status_indicator: 'Generated response using Google Gemini 1.5 Flash API',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Gemini direct API call notice:', err);
+    }
+  }
+
   // General Domain-Grounded Fallback
   return {
     conversation_id: conversationId,
