@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string) => Promise<boolean>;
   signup: (data: { name: string; email: string; dob?: string; primary_doctor?: string }) => Promise<boolean>;
+  loginWithGoogle: (customEmail?: string, customName?: string) => Promise<boolean>;
   logout: () => void;
   setDemoUser: (userId: string) => void;
 }
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: async () => false,
   signup: async () => false,
+  loginWithGoogle: async () => false,
   logout: () => {},
   setDemoUser: () => {},
 });
@@ -26,7 +28,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check saved session in localStorage / cookies
     const savedUser = localStorage.getItem('app_user_session');
     if (savedUser) {
       try {
@@ -35,7 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('app_user_session');
       }
     } else {
-      // Default to Ada Lovelace (PAT-2001) for seamless initial experience
       const defaultAda: UserSession = {
         id: 'PAT-2001',
         name: 'Ada Lovelace',
@@ -92,6 +92,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (customEmail?: string, customName?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: customEmail || 'google.patient@example.com',
+          name: customName || 'Google Verified Patient',
+        }),
+      });
+      const data = await res.json();
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem('app_user_session', JSON.stringify(data.user));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Google Auth error:', err);
+      return false;
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('app_user_session');
@@ -108,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, setDemoUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, loginWithGoogle, logout, setDemoUser }}>
       {children}
     </AuthContext.Provider>
   );

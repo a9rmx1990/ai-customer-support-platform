@@ -7,6 +7,8 @@ export interface UserSession {
   role: 'patient' | 'doctor' | 'admin' | 'customer';
   dob?: string;
   primary_doctor?: string;
+  avatar?: string;
+  google_id?: string;
   token: string;
   created_at: string;
 }
@@ -141,4 +143,50 @@ export function authenticateUser(email: string): UserSession | null {
   }
 
   return null;
+}
+
+/**
+ * Provisions or authenticates a patient account via Google OAuth Single Sign-On (SSO).
+ */
+export function authenticateWithGoogle(googleProfile: {
+  name: string;
+  email: string;
+  google_id?: string;
+  avatar?: string;
+}): UserSession {
+  let existing = findUserByEmail(googleProfile.email);
+  if (existing) {
+    existing.google_id = googleProfile.google_id || `google-id-${Date.now()}`;
+    if (googleProfile.avatar) existing.avatar = googleProfile.avatar;
+    return existing;
+  }
+
+  const newId = `PAT-${2000 + registeredUsers.length + 1}`;
+  const token = createMockJWT(newId, googleProfile.email);
+
+  const newUser: UserSession = {
+    id: newId,
+    name: googleProfile.name.trim(),
+    email: googleProfile.email.trim().toLowerCase(),
+    role: 'patient',
+    dob: '1992-08-14',
+    primary_doctor: 'Dr. Sarah Jenkins (Cardiology)',
+    avatar: googleProfile.avatar,
+    google_id: googleProfile.google_id || `google-${Date.now()}`,
+    token,
+    created_at: new Date().toISOString(),
+  };
+
+  registeredUsers.push(newUser);
+
+  INITIAL_PATIENTS.push({
+    patient_id: newUser.id,
+    name: newUser.name,
+    email: newUser.email,
+    dob: newUser.dob || '1992-08-14',
+    primary_doctor: newUser.primary_doctor || 'Dr. Sarah Jenkins (Cardiology)',
+    created_at: newUser.created_at,
+  });
+
+  return newUser;
 }
