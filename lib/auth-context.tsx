@@ -6,8 +6,8 @@ import { UserSession } from './auth-service';
 interface AuthContextType {
   user: UserSession | null;
   loading: boolean;
-  login: (email: string) => Promise<boolean>;
-  signup: (data: { name: string; email: string; dob?: string; primary_doctor?: string }) => Promise<boolean>;
+  login: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (data: { name: string; email: string; password?: string; dob?: string; primary_doctor?: string }) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: (customEmail?: string, customName?: string) => Promise<boolean>;
   loginWithGoogleCredential: (credential: string) => Promise<boolean>;
   logout: () => void;
@@ -17,8 +17,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: async () => false,
-  signup: async () => false,
+  login: async () => ({ success: false }),
+  signup: async () => ({ success: false }),
   loginWithGoogle: async () => false,
   loginWithGoogleCredential: async () => false,
   logout: () => {},
@@ -54,27 +54,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, []);
 
-  const login = async (email: string): Promise<boolean> => {
+  const login = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (data.user) {
+      if (res.ok && data.user) {
+        setUser(data.user);
+        localStorage.setItem('app_user_session', JSON.stringify(data.user));
+        return { success: true };
+      }
+      return { success: false, error: data.error || 'Invalid email or password.' };
+    } catch (err) {
+      console.error('Login error:', err);
+      return { success: false, error: 'Invalid email or password.' };
+    }
+  };
+
+  const loginDemoUser = async (email: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, is_demo_click: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
         setUser(data.user);
         localStorage.setItem('app_user_session', JSON.stringify(data.user));
         return true;
       }
       return false;
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Demo Login error:', err);
       return false;
     }
   };
 
-  const signup = async (data: { name: string; email: string; dob?: string; primary_doctor?: string }): Promise<boolean> => {
+  const signup = async (data: {
+    name: string;
+    email: string;
+    password?: string;
+    dob?: string;
+    primary_doctor?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -82,15 +108,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(data),
       });
       const resData = await res.json();
-      if (resData.user) {
+      if (res.ok && resData.user) {
         setUser(resData.user);
         localStorage.setItem('app_user_session', JSON.stringify(resData.user));
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: resData.error || 'Registration failed.' };
     } catch (err) {
       console.error('Signup error:', err);
-      return false;
+      return { success: false, error: 'Registration failed.' };
     }
   };
 
@@ -144,11 +170,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setDemoUser = (userId: string) => {
     if (userId.startsWith('PAT-2001')) {
-      login('ada@example.com');
+      loginDemoUser('ada@example.com');
     } else if (userId.startsWith('PAT-2002')) {
-      login('alan@example.com');
+      loginDemoUser('alan@example.com');
     } else if (userId.startsWith('DOC-3001')) {
-      login('dr.jenkins@example.com');
+      loginDemoUser('dr.jenkins@example.com');
     }
   };
 

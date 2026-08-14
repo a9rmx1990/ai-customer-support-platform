@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus, User, Mail, Calendar, UserCheck, Stethoscope } from 'lucide-react';
+import { UserPlus, User, Mail, Calendar, UserCheck, Stethoscope, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     dob: '',
     primary_doctor: 'Dr. Sarah Jenkins (Cardiology)',
   });
@@ -21,18 +22,21 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim()) return;
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
+      setError('Name, email, and password are required.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
-    const success = await signup(formData);
+    const result = await signup(formData);
     setLoading(false);
 
-    if (success) {
+    if (result.success) {
       router.push('/chat?domain=medical');
     } else {
-      setError('Registration failed. Please try again or sign in with Google.');
+      setError(result.error || 'Registration failed. Please try again or sign in with Google.');
     }
   };
 
@@ -85,6 +89,21 @@ export default function SignupPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="eleanor@example.com"
+                className="w-full bg-gray-950 text-gray-100 text-xs pl-10 pr-4 py-3 rounded-xl border border-gray-800 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-300">Password</label>
+            <div className="relative">
+              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500" />
+              <input
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••••••"
                 className="w-full bg-gray-950 text-gray-100 text-xs pl-10 pr-4 py-3 rounded-xl border border-gray-800 focus:outline-none focus:border-emerald-500"
               />
             </div>

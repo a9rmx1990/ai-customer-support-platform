@@ -1,4 +1,5 @@
-import { INITIAL_PATIENTS, INITIAL_CUSTOMERS, Patient, Customer } from './mock-data';
+import crypto from 'crypto';
+import { INITIAL_PATIENTS, Patient } from './mock-data';
 
 export interface UserSession {
   id: string;
@@ -13,8 +14,21 @@ export interface UserSession {
   created_at: string;
 }
 
-// In-memory user store initialized with demo accounts
-let registeredUsers: UserSession[] = [
+interface InternalUserRecord extends UserSession {
+  passwordHash?: string;
+}
+
+/**
+ * Hashes a password string using SHA-256 algorithm.
+ */
+export function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+const DEFAULT_DEMO_HASH = hashPassword('password123');
+
+// In-memory user store initialized with secure hashed password demo accounts
+let registeredUsers: InternalUserRecord[] = [
   {
     id: 'PAT-2001',
     name: 'Ada Lovelace',
@@ -24,6 +38,7 @@ let registeredUsers: UserSession[] = [
     primary_doctor: 'Dr. Sarah Jenkins (Cardiology)',
     token: 'jwt-token-pat-2001-ada',
     created_at: '2025-05-10T09:00:00Z',
+    passwordHash: DEFAULT_DEMO_HASH,
   },
   {
     id: 'PAT-2002',
@@ -34,6 +49,7 @@ let registeredUsers: UserSession[] = [
     primary_doctor: 'Dr. Marcus Vance (Neurology)',
     token: 'jwt-token-pat-2002-alan',
     created_at: '2025-06-15T10:30:00Z',
+    passwordHash: DEFAULT_DEMO_HASH,
   },
   {
     id: 'DOC-3001',
@@ -42,6 +58,7 @@ let registeredUsers: UserSession[] = [
     role: 'doctor',
     token: 'jwt-token-doc-3001-jenkins',
     created_at: '2024-01-01T08:00:00Z',
+    passwordHash: DEFAULT_DEMO_HASH,
   },
   {
     id: 'ADMIN-100',
@@ -50,6 +67,7 @@ let registeredUsers: UserSession[] = [
     role: 'admin',
     token: 'jwt-token-admin-100',
     created_at: '2024-01-01T08:00:00Z',
+    passwordHash: DEFAULT_DEMO_HASH,
   },
 ];
 
@@ -63,20 +81,28 @@ function createMockJWT(userId: string, email: string): string {
   return `${header}.${payload}.${signature}`;
 }
 
-export function getAllUsersStore(): UserSession[] {
-  return registeredUsers;
+export function sanitizeUserSession(record: InternalUserRecord): UserSession {
+  const { passwordHash, ...session } = record;
+  return session;
 }
 
-export function findUserByEmail(email: string): UserSession | undefined {
+export function getAllUsersStore(): UserSession[] {
+  return registeredUsers.map(sanitizeUserSession);
+}
+
+export function findUserByEmail(email: string): InternalUserRecord | undefined {
+  if (!email || typeof email !== 'string') return undefined;
   return registeredUsers.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
 }
 
 export function findUserById(id: string): UserSession | undefined {
-  return registeredUsers.find((u) => u.id === id);
+  const user = registeredUsers.find((u) => u.id === id);
+  return user ? sanitizeUserSession(user) : undefined;
 }
 
 export function findUserByToken(token: string): UserSession | undefined {
-  return registeredUsers.find((u) => u.token === token);
+  const user = registeredUsers.find((u) => u.token === token);
+  return user ? sanitizeUserSession(user) : undefined;
 }
 
 export function registerNewPatient(data: {
@@ -88,13 +114,17 @@ export function registerNewPatient(data: {
 }): UserSession {
   const existing = findUserByEmail(data.email);
   if (existing) {
-    return existing;
+    if (data.password && !existing.passwordHash) {
+      existing.passwordHash = hashPassword(data.password);
+    }
+    return sanitizeUserSession(existing);
   }
 
   const newId = `PAT-${2000 + registeredUsers.length + 1}`;
   const token = createMockJWT(newId, data.email);
+  const passwordHash = data.password ? hashPassword(data.password) : DEFAULT_DEMO_HASH;
 
-  const newUser: UserSession = {
+  const newUser: InternalUserRecord = {
     id: newId,
     name: data.name.trim(),
     email: data.email.trim().toLowerCase(),
@@ -103,6 +133,7 @@ export function registerNewPatient(data: {
     primary_doctor: data.primary_doctor || 'Dr. Sarah Jenkins (Cardiology)',
     token,
     created_at: new Date().toISOString(),
+    passwordHash,
   };
 
   registeredUsers.push(newUser);
@@ -117,32 +148,45 @@ export function registerNewPatient(data: {
     created_at: newUser.created_at,
   });
 
-  return newUser;
+  return sanitizeUserSession(newUser);
 }
 
-export function authenticateUser(email: string): UserSession | null {
-  const user = findUserByEmail(email);
-  if (user) return user;
+/**
+ * Authenticates email + password credentials.
+ * Hashes supplied password and verifies against stored password hash.
+ */
+export function authenticateUser(email?: string, password?: string): UserSession | null {
+  if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+    return null;
+  }
 
-  // Auto-provision if demo user
-  const demoPatient = INITIAL_PATIENTS.find((p) => p.email.toLowerCase() === email.toLowerCase());
-  if (demoPatient) {
-    const token = createMockJWT(demoPatient.patient_id, demoPatient.email);
-    const newUser: UserSession = {
-      id: demoPatient.patient_id,
-      name: demoPatient.name,
-      email: demoPatient.email,
-      role: 'patient',
-      dob: demoPatient.dob,
-      primary_doctor: demoPatient.primary_doctor,
-      token,
-      created_at: demoPatient.created_at,
-    };
-    registeredUsers.push(newUser);
-    return newUser;
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPassword = password.trim();
+
+  if (!cleanEmail || !cleanPassword) {
+    return null;
+  }
+
+  const user = findUserByEmail(cleanEmail);
+  if (!user) {
+    return null;
+  }
+
+  const inputHash = hashPassword(cleanPassword);
+  if (user.passwordHash && user.passwordHash === inputHash) {
+    return sanitizeUserSession(user);
   }
 
   return null;
+}
+
+/**
+ * Authenticates intentional demo accounts via one-click login.
+ */
+export function authenticateDemoUser(email: string): UserSession | null {
+  if (!email || typeof email !== 'string') return null;
+  const user = findUserByEmail(email.trim().toLowerCase());
+  return user ? sanitizeUserSession(user) : null;
 }
 
 /**
@@ -158,13 +202,13 @@ export function authenticateWithGoogle(googleProfile: {
   if (existing) {
     existing.google_id = googleProfile.google_id || `google-id-${Date.now()}`;
     if (googleProfile.avatar) existing.avatar = googleProfile.avatar;
-    return existing;
+    return sanitizeUserSession(existing);
   }
 
   const newId = `PAT-${2000 + registeredUsers.length + 1}`;
   const token = createMockJWT(newId, googleProfile.email);
 
-  const newUser: UserSession = {
+  const newUser: InternalUserRecord = {
     id: newId,
     name: googleProfile.name.trim(),
     email: googleProfile.email.trim().toLowerCase(),
@@ -188,5 +232,5 @@ export function authenticateWithGoogle(googleProfile: {
     created_at: newUser.created_at,
   });
 
-  return newUser;
+  return sanitizeUserSession(newUser);
 }

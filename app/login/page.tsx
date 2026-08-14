@@ -9,7 +9,7 @@ import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, setDemoUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,31 +17,27 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password.trim()) {
+      setError('Invalid email or password.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
-    const success = await login(email);
+    const result = await login(email, password);
     setLoading(false);
 
-    if (success) {
+    if (result.success) {
       router.push('/chat?domain=medical');
     } else {
-      setError('Account not found. Try Google Sign-In or one of the quick test accounts below.');
+      setError(result.error || 'Invalid email or password.');
     }
   };
 
-  const handleQuickLogin = async (demoEmail: string) => {
-    setEmail(demoEmail);
-    setLoading(true);
-    setError(null);
-
-    const success = await login(demoEmail);
-    setLoading(false);
-    if (success) {
-      router.push('/chat?domain=medical');
-    }
+  const handleQuickLogin = (demoId: string) => {
+    setDemoUser(demoId);
+    router.push('/chat?domain=medical');
   };
 
   return (
@@ -99,8 +95,8 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
-              {error}
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2">
+              <span className="font-semibold">{error}</span>
             </div>
           )}
 
@@ -123,23 +119,25 @@ export default function LoginPage() {
           </p>
 
           <button
-            onClick={() => handleQuickLogin('ada@example.com')}
+            type="button"
+            onClick={() => handleQuickLogin('PAT-2001')}
             className="w-full p-2.5 rounded-xl bg-gray-900/90 hover:bg-emerald-950/60 border border-gray-800 hover:border-emerald-500/40 text-left text-xs transition-all flex items-center justify-between text-gray-200"
           >
             <div>
               <p className="font-semibold text-emerald-300">Ada Lovelace (Patient)</p>
-              <p className="text-[10px] text-gray-500">ada@example.com • PAT-2001</p>
+              <p className="text-[10px] text-gray-500">ada@example.com • Password: password123</p>
             </div>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </button>
 
           <button
-            onClick={() => handleQuickLogin('dr.jenkins@example.com')}
+            type="button"
+            onClick={() => handleQuickLogin('DOC-3001')}
             className="w-full p-2.5 rounded-xl bg-gray-900/90 hover:bg-purple-950/60 border border-gray-800 hover:border-purple-500/40 text-left text-xs transition-all flex items-center justify-between text-gray-200"
           >
             <div>
               <p className="font-semibold text-purple-300">Dr. Sarah Jenkins (Doctor)</p>
-              <p className="text-[10px] text-gray-500">dr.jenkins@example.com • DOC-3001</p>
+              <p className="text-[10px] text-gray-500">dr.jenkins@example.com • Password: password123</p>
             </div>
             <CheckCircle2 className="w-4 h-4 text-purple-400" />
           </button>

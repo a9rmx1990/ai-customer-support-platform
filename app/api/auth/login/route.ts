@@ -1,19 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser } from '@/lib/auth-service';
+import { authenticateUser, authenticateDemoUser } from '@/lib/auth-service';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { email } = body;
+    const body = await req.json().catch(() => ({}));
+    const { email, password, is_demo_click } = body;
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email address is required.' }, { status: 400 });
+    // Handle One-Click Demo Accounts explicitly
+    if (is_demo_click && email) {
+      const demoUser = authenticateDemoUser(email);
+      if (demoUser) {
+        return NextResponse.json({ success: true, user: demoUser });
+      }
     }
 
-    const user = authenticateUser(email);
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 400 });
+    }
+
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 400 });
+    }
+
+    const user = authenticateUser(cleanEmail, cleanPassword);
 
     if (!user) {
-      return NextResponse.json({ error: 'Account not found. Please register first.' }, { status: 404 });
+      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
     }
 
     return NextResponse.json({ success: true, user });
