@@ -35,14 +35,27 @@ import {
   AppDomain,
 } from '@/lib/mock-data';
 
+import { useAuth } from '@/lib/auth-context';
+
 function ChatPageContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialDomain = (searchParams.get('domain') || 'medical') as AppDomain;
+  const { user } = useAuth();
 
   const [activeDomain, setActiveDomain] = useState<AppDomain>(initialDomain);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(INITIAL_CUSTOMERS[0]);
   const [selectedPatient, setSelectedPatient] = useState<Patient>(INITIAL_PATIENTS[0]);
+
+  useEffect(() => {
+    if (user) {
+      const matchP = INITIAL_PATIENTS.find((p) => p.patient_id === user.id || p.email.toLowerCase() === user.email.toLowerCase());
+      if (matchP) setSelectedPatient(matchP);
+      const matchC = INITIAL_CUSTOMERS.find((c) => c.customer_id === user.id || c.email.toLowerCase() === user.email.toLowerCase());
+      if (matchC) setSelectedCustomer(matchC);
+    }
+  }, [user]);
+
 
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [patientAppointments, setPatientAppointments] = useState<MedicalAppointment[]>(INITIAL_APPOINTMENTS);
