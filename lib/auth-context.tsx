@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string) => Promise<boolean>;
   signup: (data: { name: string; email: string; dob?: string; primary_doctor?: string }) => Promise<boolean>;
   loginWithGoogle: (customEmail?: string, customName?: string) => Promise<boolean>;
+  loginWithGoogleCredential: (credential: string) => Promise<boolean>;
   logout: () => void;
   setDemoUser: (userId: string) => void;
 }
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => false,
   signup: async () => false,
   loginWithGoogle: async () => false,
+  loginWithGoogleCredential: async () => false,
   logout: () => {},
   setDemoUser: () => {},
 });
@@ -115,6 +117,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogleCredential = async (credential: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+      const data = await res.json();
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem('app_user_session', JSON.stringify(data.user));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Google Credential Auth error:', err);
+      return false;
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('app_user_session');
@@ -131,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, loginWithGoogle, logout, setDemoUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, loginWithGoogle, loginWithGoogleCredential, logout, setDemoUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import ChatWidget from '@/components/ChatWidget';
@@ -19,6 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
+      </head>
       <body className={`${inter.className} bg-gray-950 text-gray-100 min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-white`}>
         <AuthProvider>
           <Navbar />
