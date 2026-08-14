@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAgentEngine, AgentRequest } from '@/lib/ai-agent-engine';
+import { AppDomain } from '@/lib/mock-data';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const customer_id = (body.customer_id || 'CUST-1001').toString().trim();
+    const domain: AppDomain = (body.domain || 'medical') as AppDomain;
+    const customer_id = (body.customer_id || (domain === 'medical' ? 'PAT-2001' : 'CUST-1001')).toString().trim();
     const conversation_id = (body.conversation_id || `conv-${Date.now()}`).toString().trim();
     const message = (body.message || '').toString().trim();
 
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
             customer_id,
             conversation_id,
             message,
+            domain,
           }),
           signal: AbortSignal.timeout(15000),
         });
@@ -52,6 +55,7 @@ export async function POST(req: NextRequest) {
             escalated: Boolean(data.escalated),
             ticket_id: data.ticket_id || null,
             status_indicator: data.status_indicator || 'Executed via n8n workflow',
+            domain,
             source: 'n8n-webhook',
           });
         }
@@ -60,11 +64,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Standalone Intelligent Engine Execution
+    // 2. Standalone Multi-Domain Engine Execution
     const payload: AgentRequest = {
       customer_id,
       conversation_id,
       message,
+      domain,
     };
 
     const agentResult = await runAgentEngine(payload);
@@ -80,6 +85,7 @@ export async function POST(req: NextRequest) {
       status_indicator: agentResult.status_indicator,
       requires_confirmation: agentResult.requires_confirmation,
       pending_action: agentResult.pending_action,
+      domain: agentResult.domain || domain,
       source: 'standalone-engine',
     });
   } catch (error: any) {

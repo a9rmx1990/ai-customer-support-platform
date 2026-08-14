@@ -1,137 +1,171 @@
--- ==========================================================
--- AI Customer Support Automation - Database Schema Setup
--- Idempotent PostgreSQL + pgvector schema script.
--- Safe to re-run. Execute ONCE before running n8n workflows.
--- ==========================================================
+-- ============================================================================
+-- AI CUSTOMER & HEALTHCARE SUPPORT AUTOMATION PLATFORM (PostgreSQL + pgvector)
+-- Multi-Domain Schema: Medical / Clinical Services, E-Commerce, Enterprise SaaS
+-- ============================================================================
 
--- 1. Enable pgvector extension for AI embeddings
+-- 1. Enable pgvector extension for embedding searches
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- 2. Customers Table
+-- 2. Customers Table (E-Commerce)
 CREATE TABLE IF NOT EXISTS customers (
-  customer_id TEXT PRIMARY KEY,
-  name        TEXT,
-  email       TEXT,
-  created_at  TIMESTAMPTZ DEFAULT now()
+    customer_id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Conversations Table
+-- 3. Patients Table (Medical / Clinical)
+CREATE TABLE IF NOT EXISTS patients (
+    patient_id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    dob DATE NOT NULL,
+    primary_doctor VARCHAR(150),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Conversations Table
 CREATE TABLE IF NOT EXISTS conversations (
-  conversation_id TEXT PRIMARY KEY,
-  customer_id     TEXT REFERENCES customers(customer_id) ON DELETE SET NULL,
-  status          TEXT DEFAULT 'open',
-  created_at      TIMESTAMPTZ DEFAULT now(),
-  updated_at      TIMESTAMPTZ DEFAULT now()
+    conversation_id VARCHAR(100) PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL,
+    domain VARCHAR(50) DEFAULT 'medical',
+    channel VARCHAR(50) DEFAULT 'web_chat',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Messages Table (Full conversation history)
+-- 5. Messages History Table
 CREATE TABLE IF NOT EXISTS messages (
-  id              BIGSERIAL PRIMARY KEY,
-  customer_id     TEXT,
-  conversation_id TEXT,
-  role            TEXT CHECK (role IN ('user', 'assistant', 'system', 'tool', 'customer')),
-  message         TEXT NOT NULL,
-  timestamp       TIMESTAMPTZ DEFAULT now()
+    message_id BIGSERIAL PRIMARY KEY,
+    conversation_id VARCHAR(100) REFERENCES conversations(conversation_id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system', 'tool')),
+    content TEXT NOT NULL,
+    intent VARCHAR(50),
+    domain VARCHAR(50) DEFAULT 'medical',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Support Tickets Table (Created on escalation / explicit ticket request)
+-- 6. Support Tickets Escalation Table
 CREATE TABLE IF NOT EXISTS support_tickets (
-  ticket_id       BIGSERIAL PRIMARY KEY,
-  customer_id     TEXT,
-  conversation_id TEXT,
-  issue           TEXT,
-  reason          TEXT,
-  priority        TEXT DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
-  status          TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
-  created_at      TIMESTAMPTZ DEFAULT now(),
-  updated_at      TIMESTAMPTZ DEFAULT now()
+    ticket_id SERIAL PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL,
+    conversation_id VARCHAR(100),
+    issue VARCHAR(255) NOT NULL,
+    reason TEXT,
+    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Orders Table (Looked up by order status tools)
+-- 7. Orders Table (E-Commerce)
 CREATE TABLE IF NOT EXISTS orders (
-  order_id           TEXT PRIMARY KEY,
-  customer_id        TEXT,
-  status             TEXT CHECK (status IN ('pending', 'processing', 'shipped', 'in_transit', 'delivered', 'cancelled')),
-  total              NUMERIC(10, 2),
-  items              JSONB,
-  tracking_number    TEXT,
-  estimated_delivery TEXT,
-  created_at         TIMESTAMPTZ DEFAULT now(),
-  updated_at         TIMESTAMPTZ DEFAULT now()
+    order_id VARCHAR(50) PRIMARY KEY,
+    customer_id VARCHAR(50) REFERENCES customers(customer_id) ON DELETE CASCADE,
+    status VARCHAR(30) NOT NULL CHECK (status IN ('pending', 'processing', 'shipped', 'in_transit', 'delivered', 'cancelled', 'refunded')),
+    total DECIMAL(10, 2) NOT NULL,
+    tracking_number VARCHAR(100),
+    estimated_delivery DATE,
+    shipping_address TEXT,
+    items JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. Knowledge Base: Source Documents
+-- 8. Medical Appointments Table
+CREATE TABLE IF NOT EXISTS appointments (
+    appointment_id VARCHAR(50) PRIMARY KEY,
+    patient_id VARCHAR(50) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    doctor_name VARCHAR(150) NOT NULL,
+    specialty VARCHAR(100) NOT NULL,
+    date_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    type VARCHAR(30) DEFAULT 'in_person' CHECK (type IN ('in_person', 'telehealth')),
+    status VARCHAR(30) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
+    location TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. Lab Results Table
+CREATE TABLE IF NOT EXISTS lab_results (
+    lab_id VARCHAR(50) PRIMARY KEY,
+    patient_id VARCHAR(50) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    test_name VARCHAR(150) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    result_status VARCHAR(30) DEFAULT 'normal' CHECK (result_status IN ('normal', 'abnormal', 'pending')),
+    date_conducted DATE NOT NULL,
+    summary TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Knowledge Base Documents Table
 CREATE TABLE IF NOT EXISTS knowledge_documents (
-  document_id BIGSERIAL PRIMARY KEY,
-  title       TEXT NOT NULL,
-  category    TEXT,
-  source      TEXT,
-  created_at  TIMESTAMPTZ DEFAULT now()
+    document_id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    domain VARCHAR(50) DEFAULT 'medical',
+    source_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 8. Knowledge Base: Embedded Chunks (pgvector 1536 dims for text-embedding-3-small)
+-- 11. Knowledge Base Chunks (pgvector 1536 dimensions)
 CREATE TABLE IF NOT EXISTS knowledge_chunks (
-  id          BIGSERIAL PRIMARY KEY,
-  document_id BIGINT REFERENCES knowledge_documents(document_id) ON DELETE CASCADE,
-  chunk_text  TEXT NOT NULL,
-  embedding   vector(1536),
-  metadata    JSONB,
-  created_at  TIMESTAMPTZ DEFAULT now()
+    id SERIAL PRIMARY KEY,
+    document_id INT REFERENCES knowledge_documents(document_id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    domain VARCHAR(50) DEFAULT 'medical',
+    chunk_text TEXT NOT NULL,
+    embedding vector(1536)
 );
 
--- 9. Structured Application Logs (Per chat request)
+-- 12. Support Logs Audit Table
 CREATE TABLE IF NOT EXISTS support_logs (
-  id              BIGSERIAL PRIMARY KEY,
-  customer_id     TEXT,
-  conversation_id TEXT,
-  intent          TEXT,
-  retrieved_docs  JSONB,
-  tools_used      JSONB,
-  response        TEXT,
-  escalated       BOOLEAN DEFAULT false,
-  ticket_id       BIGINT,
-  errors          TEXT,
-  created_at      TIMESTAMPTZ DEFAULT now()
+    log_id BIGSERIAL PRIMARY KEY,
+    customer_id VARCHAR(50),
+    conversation_id VARCHAR(100),
+    intent VARCHAR(50),
+    domain VARCHAR(50) DEFAULT 'medical',
+    retrieved_docs JSONB,
+    tools_used JSONB,
+    response TEXT,
+    escalated BOOLEAN DEFAULT FALSE,
+    ticket_id INT,
+    errors TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. n8n Postgres Chat Memory Table
+-- 13. n8n Postgres Chat Memory Table
 CREATE TABLE IF NOT EXISTS n8n_chat_histories (
-  id         SERIAL PRIMARY KEY,
-  session_id VARCHAR(255) NOT NULL,
-  message    JSONB NOT NULL
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    message JSONB NOT NULL
 );
 
--- Indexes for efficient queries
-CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages (conversation_id);
-CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders (customer_id);
-CREATE INDEX IF NOT EXISTS idx_chunks_document ON knowledge_chunks (document_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_customer ON support_tickets (customer_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_customer ON conversations (customer_id);
+-- Indexing for performance
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+CREATE INDEX IF NOT EXISTS idx_patients_email ON patients(email);
+CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_patient ON appointments(patient_id);
+CREATE INDEX IF NOT EXISTS idx_lab_results_patient ON lab_results(patient_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_customer ON support_tickets(customer_id);
+CREATE INDEX IF NOT EXISTS idx_chunks_domain ON knowledge_chunks(domain);
+CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON knowledge_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
--- Seed Data (Customers & Orders)
-INSERT INTO customers (customer_id, name, email) VALUES
-  ('CUST-1001', 'Ada Lovelace', 'ada@example.com'),
-  ('CUST-1002', 'Alan Turing',  'alan@example.com'),
-  ('CUST-1003', 'Grace Hopper', 'grace@example.com'),
-  ('CUST-1004', 'Claude Shannon', 'claude@example.com'),
-  ('CUST-1005', 'Margaret Hamilton', 'margaret@example.com')
-ON CONFLICT (customer_id) DO NOTHING;
+-- SEED PATIENTS
+INSERT INTO patients (patient_id, name, email, dob, primary_doctor) VALUES
+('PAT-2001', 'Ada Lovelace', 'ada@example.com', '1985-12-10', 'Dr. Sarah Jenkins (Cardiology)'),
+('PAT-2002', 'Alan Turing', 'alan@example.com', '1982-06-23', 'Dr. Marcus Vance (Neurology)'),
+('PAT-2003', 'Grace Hopper', 'grace@example.com', '1979-12-09', 'Dr. Emily Chen (Internal Medicine)')
+ON CONFLICT (patient_id) DO NOTHING;
 
-INSERT INTO orders (order_id, customer_id, status, total, tracking_number, estimated_delivery, items) VALUES
-  ('ORD-5001', 'CUST-1001', 'shipped',   129.99, 'TRK-98234101', '2026-08-16', '[{"sku":"WIDGET-PRO","qty":1, "name":"Widget Pro Unit"}]'),
-  ('ORD-5002', 'CUST-1001', 'processing', 49.50, 'TRK-98234102', '2026-08-18', '[{"sku":"CABLE-USB-C","qty":2, "name":"Braided USB-C Cable"}]'),
-  ('ORD-5003', 'CUST-1002', 'delivered',  15.00, 'TRK-98234103', '2026-08-10', '[{"sku":"ADAPTER-MINI","qty":1, "name":"Mini Power Adapter"}]'),
-  ('ORD-5004', 'CUST-1002', 'in_transit', 199.00, 'TRK-98234104', '2026-08-15', '[{"sku":"DOCK-STATION","qty":1, "name":"Thunderbolt Dock"}]'),
-  ('ORD-5005', 'CUST-1003', 'shipped',    89.00, 'TRK-98234105', '2026-08-17', '[{"sku":"KEYBOARD-MECH","qty":1, "name":"Wireless Mechanical Keyboard"}]'),
-  ('ORD-5006', 'CUST-1003', 'delivered',  29.99, 'TRK-98234106', '2026-08-05', '[{"sku":"MOUSE-ERGO","qty":1, "name":"Ergonomic Wireless Mouse"}]'),
-  ('ORD-5007', 'CUST-1004', 'pending',   349.99, 'TRK-98234107', '2026-08-20', '[{"sku":"MONITOR-4K","qty":1, "name":"27-inch 4K Display"}]'),
-  ('ORD-5008', 'CUST-1004', 'delivered',  75.00, 'TRK-98234108', '2026-08-01', '[{"sku":"DESK-MAT","qty":1, "name":"Leather Desk Mat"}]'),
-  ('ORD-5009', 'CUST-1005', 'cancelled',  120.00, NULL,          NULL,         '[{"sku":"HEADPHONES-BT","qty":1, "name":"Noise Cancelling Headphones"}]'),
-  ('ORD-5010', 'CUST-1005', 'processing', 15.99, 'TRK-98234110', '2026-08-19', '[{"sku":"SCREEN-CLEAN","qty":1, "name":"Screen Cleaning Kit"}]')
-ON CONFLICT (order_id) DO NOTHING;
+-- SEED APPOINTMENTS
+INSERT INTO appointments (appointment_id, patient_id, doctor_name, specialty, date_time, type, status, location) VALUES
+('APT-8001', 'PAT-2001', 'Dr. Sarah Jenkins', 'Cardiology', '2026-08-18 10:00:00+00', 'in_person', 'scheduled', 'Downtown Health Center - Suite 402'),
+('APT-8002', 'PAT-2001', 'Dr. Emily Chen', 'Internal Medicine', '2026-08-25 14:30:00+00', 'telehealth', 'scheduled', 'Virtual Telehealth Portal')
+ON CONFLICT (appointment_id) DO NOTHING;
 
-INSERT INTO support_tickets (ticket_id, customer_id, conversation_id, issue, reason, priority, status) VALUES
-  (10001, 'CUST-1001', 'conv-101', 'Tracking inquiry regarding ORD-5001', 'Customer requested human follow-up on customs hold', 'medium', 'open'),
-  (10002, 'CUST-1003', 'conv-102', 'Damaged package received', 'Physical outer box crushed during transit', 'high', 'in_progress'),
-  (10003, 'CUST-1005', 'conv-103', 'Subscription refund request', 'Cancelled service within 14-day digital product refund window', 'urgent', 'open')
-ON CONFLICT (ticket_id) DO NOTHING;
+-- SEED LAB RESULTS
+INSERT INTO lab_results (lab_id, patient_id, test_name, category, result_status, date_conducted, summary) VALUES
+('LAB-9001', 'PAT-2001', 'Comprehensive Metabolic & Blood Panel', 'Hematology', 'normal', '2026-08-11', 'All glucose, electrolyte, kidney, and liver enzyme levels within standard healthy ranges.')
+ON CONFLICT (lab_id) DO NOTHING;

@@ -1,7 +1,18 @@
+export type AppDomain = 'medical' | 'ecommerce' | 'saas';
+
 export interface Customer {
   customer_id: string;
   name: string;
   email: string;
+  created_at: string;
+}
+
+export interface Patient {
+  patient_id: string;
+  name: string;
+  email: string;
+  dob: string;
+  primary_doctor: string;
   created_at: string;
 }
 
@@ -25,6 +36,27 @@ export interface Order {
   refund_reason?: string;
 }
 
+export interface MedicalAppointment {
+  appointment_id: string;
+  patient_id: string;
+  doctor_name: string;
+  specialty: string;
+  date_time: string;
+  type: 'in_person' | 'telehealth';
+  status: 'scheduled' | 'completed' | 'cancelled';
+  location: string;
+}
+
+export interface LabResult {
+  lab_id: string;
+  patient_id: string;
+  test_name: string;
+  category: string;
+  result_status: 'normal' | 'abnormal' | 'pending';
+  date_conducted: string;
+  summary: string;
+}
+
 export interface SupportTicket {
   ticket_id: number;
   customer_id: string;
@@ -42,6 +74,7 @@ export interface KnowledgeChunk {
   document_id: number;
   title: string;
   category: string;
+  domain: AppDomain;
   chunk_text: string;
 }
 
@@ -55,9 +88,10 @@ export interface Message {
   escalated?: boolean;
   ticket_id?: number | null;
   status_indicator?: string;
+  domain?: AppDomain;
 }
 
-// 5 Demo Customers
+// 5 Demo Customers (E-Commerce)
 export const INITIAL_CUSTOMERS: Customer[] = [
   { customer_id: 'CUST-1001', name: 'Ada Lovelace', email: 'ada@example.com', created_at: '2026-01-15T09:00:00Z' },
   { customer_id: 'CUST-1002', name: 'Alan Turing', email: 'alan@example.com', created_at: '2026-02-01T10:30:00Z' },
@@ -66,7 +100,91 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   { customer_id: 'CUST-1005', name: 'Margaret Hamilton', email: 'margaret@example.com', created_at: '2026-03-12T16:20:00Z' },
 ];
 
-// 10 Demo Orders
+// 5 Demo Patients (Medical Clinic)
+export const INITIAL_PATIENTS: Patient[] = [
+  { patient_id: 'PAT-2001', name: 'Ada Lovelace', email: 'ada@example.com', dob: '1985-12-10', primary_doctor: 'Dr. Sarah Jenkins (Cardiology)', created_at: '2025-05-10T09:00:00Z' },
+  { patient_id: 'PAT-2002', name: 'Alan Turing', email: 'alan@example.com', dob: '1982-06-23', primary_doctor: 'Dr. Marcus Vance (Neurology)', created_at: '2025-06-15T10:30:00Z' },
+  { patient_id: 'PAT-2003', name: 'Grace Hopper', email: 'grace@example.com', dob: '1979-12-09', primary_doctor: 'Dr. Emily Chen (Internal Medicine)', created_at: '2025-07-20T14:15:00Z' },
+  { patient_id: 'PAT-2004', name: 'Claude Shannon', email: 'claude@example.com', dob: '1990-04-30', primary_doctor: 'Dr. Robert Ross (Dermatology)', created_at: '2025-08-05T11:45:00Z' },
+  { patient_id: 'PAT-2005', name: 'Margaret Hamilton', email: 'margaret@example.com', dob: '1988-08-17', primary_doctor: 'Dr. Lisa Ray (Endocrinology)', created_at: '2025-09-12T16:20:00Z' },
+];
+
+// Demo Medical Appointments
+export const INITIAL_APPOINTMENTS: MedicalAppointment[] = [
+  {
+    appointment_id: 'APT-8001',
+    patient_id: 'PAT-2001',
+    doctor_name: 'Dr. Sarah Jenkins',
+    specialty: 'Cardiology',
+    date_time: '2026-08-18T10:00:00Z',
+    type: 'in_person',
+    status: 'scheduled',
+    location: 'Downtown Health Center - Suite 402',
+  },
+  {
+    appointment_id: 'APT-8002',
+    patient_id: 'PAT-2001',
+    doctor_name: 'Dr. Emily Chen',
+    specialty: 'Internal Medicine',
+    date_time: '2026-08-25T14:30:00Z',
+    type: 'telehealth',
+    status: 'scheduled',
+    location: 'Virtual Telehealth Portal',
+  },
+  {
+    appointment_id: 'APT-8003',
+    patient_id: 'PAT-2002',
+    doctor_name: 'Dr. Marcus Vance',
+    specialty: 'Neurology',
+    date_time: '2026-08-20T11:15:00Z',
+    type: 'in_person',
+    status: 'scheduled',
+    location: 'Central Medical Pavilion - Suite 210',
+  },
+  {
+    appointment_id: 'APT-8004',
+    patient_id: 'PAT-2003',
+    doctor_name: 'Dr. Emily Chen',
+    specialty: 'Internal Medicine',
+    date_time: '2026-08-10T09:00:00Z',
+    type: 'in_person',
+    status: 'completed',
+    location: 'Downtown Health Center - Suite 101',
+  },
+];
+
+// Demo Lab Test Results
+export const INITIAL_LAB_RESULTS: LabResult[] = [
+  {
+    lab_id: 'LAB-9001',
+    patient_id: 'PAT-2001',
+    test_name: 'Comprehensive Metabolic & Blood Panel',
+    category: 'Hematology',
+    result_status: 'normal',
+    date_conducted: '2026-08-11',
+    summary: 'All glucose, electrolyte, kidney, and liver enzyme levels within standard healthy ranges.',
+  },
+  {
+    lab_id: 'LAB-9002',
+    patient_id: 'PAT-2001',
+    test_name: 'Lipid & Cholesterol Profile',
+    category: 'Cardiology',
+    result_status: 'normal',
+    date_conducted: '2026-08-11',
+    summary: 'Total cholesterol: 175 mg/dL. HDL: 58 mg/dL. Triglycerides normal.',
+  },
+  {
+    lab_id: 'LAB-9003',
+    patient_id: 'PAT-2002',
+    test_name: 'Brain MRI Diagnostic Imaging',
+    category: 'Radiology',
+    result_status: 'normal',
+    date_conducted: '2026-08-08',
+    summary: 'No acute intracranial pathology detected. Ventricles and sulci clear.',
+  },
+];
+
+// 10 Demo Orders (E-Commerce)
 export const INITIAL_ORDERS: Order[] = [
   {
     order_id: 'ORD-5001',
@@ -225,13 +343,81 @@ export const INITIAL_TICKETS: SupportTicket[] = [
   },
 ];
 
-// EXPANDED KNOWLEDGE BASE CHUNKS
+// MULTI-DOMAIN KNOWLEDGE BASE CHUNKS (Medical, E-Commerce, SaaS)
 export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
+  // 🩺 MEDICAL / CLINIC DOMAIN CHUNKS
+  {
+    id: 201,
+    document_id: 301,
+    title: 'Clinic Hours, Locations & Urgent Care',
+    category: 'Clinical FAQ',
+    domain: 'medical',
+    chunk_text: 'Downtown Health Clinic is open Monday-Friday 8:00 AM - 7:00 PM EST, and Saturday 9:00 AM - 2:00 PM. Urgent Care walk-ins are accepted daily. For life-threatening medical emergencies, call 911 or visit the nearest ER immediately.',
+  },
+  {
+    id: 202,
+    document_id: 302,
+    title: 'Doctor Appointment Scheduling & Telehealth',
+    category: 'Appointments',
+    domain: 'medical',
+    chunk_text: 'Appointments can be booked online via our patient portal or through this AI assistant. We offer both In-Person clinic visits and Virtual Telehealth consultations. Please arrive 15 minutes early for in-person check-in.',
+  },
+  {
+    id: 203,
+    document_id: 303,
+    title: 'Appointment Rescheduling & Cancellation Policy',
+    category: 'Appointments',
+    domain: 'medical',
+    chunk_text: 'Please provide at least 24 hours advance notice to cancel or reschedule an appointment without incurring a $25 late cancellation fee. You can cancel or change your visit directly in the portal or by messaging support.',
+  },
+  {
+    id: 204,
+    document_id: 304,
+    title: 'Lab Test Results & Diagnostic Reports',
+    category: 'Lab Results',
+    domain: 'medical',
+    chunk_text: 'Routine blood panels and diagnostic imaging reports are published to your Patient Portal within 24 to 48 hours of test completion. Your primary physician will review abnormal findings and contact you directly.',
+  },
+  {
+    id: 205,
+    document_id: 305,
+    title: 'Prescription Refill Request Procedure',
+    category: 'Pharmacy',
+    domain: 'medical',
+    chunk_text: 'To request a prescription refill, select your medication in the portal or ask this AI assistant. Refill requests take 1-2 business days to process and send to your designated retail or mail-order pharmacy.',
+  },
+  {
+    id: 206,
+    document_id: 306,
+    title: 'Health Insurance, Copays & Billing',
+    category: 'Billing',
+    domain: 'medical',
+    chunk_text: 'We accept major health insurance providers including Blue Cross Blue Shield, Aetna, UnitedHealthcare, Cigna, and Medicare. Copayments are due at the time of service. We accept credit cards, HSA, and FSA cards.',
+  },
+  {
+    id: 207,
+    document_id: 307,
+    title: 'Specialist Referrals & Second Opinions',
+    category: 'Clinical Care',
+    domain: 'medical',
+    chunk_text: 'Referrals to in-house specialists (Cardiology, Neurology, Dermatology, Orthopedics) require an initial primary care consultation. Referral processing takes 3-5 business days for insurance pre-authorization.',
+  },
+  {
+    id: 208,
+    document_id: 308,
+    title: 'HIPAA Patient Privacy & Medical Records',
+    category: 'Privacy',
+    domain: 'medical',
+    chunk_text: 'We strictly comply with HIPAA regulations. Your Protected Health Information (PHI) is encrypted end-to-end. Medical records can be requested under Patient Settings -> Records and are delivered within 3 business days.',
+  },
+
+  // 🛍️ SHOPPING & E-COMMERCE DELIVERY CHUNKS
   {
     id: 1,
     document_id: 101,
     title: 'General Support Hours & Contact Info',
     category: 'FAQ',
+    domain: 'ecommerce',
     chunk_text: 'Support hours are Monday to Friday, 9:00 AM to 6:00 PM EST. Weekend support is available via email ticket escalation. Emergency server status issues are monitored 24/7. Contact us via chat here or email support@example.com.',
   },
   {
@@ -239,69 +425,31 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     document_id: 102,
     title: 'Widget Pro Overview & Specifications',
     category: 'Product',
+    domain: 'ecommerce',
     chunk_text: 'The Widget Pro is our flagship automation hardware device. It features Wi-Fi 6, Bluetooth 5.2, USB-C fast charging, a 12-hour rechargeable battery, and built-in cloud synchronization. Setup takes under 5 minutes.',
-  },
-  {
-    id: 3,
-    document_id: 103,
-    title: 'Widget Pro Setup & Installation Guide',
-    category: 'Product',
-    chunk_text: 'To set up Widget Pro: 1. Charge for 30 minutes via USB-C. 2. Turn on the device until the blue LED flashes. 3. Open your mobile app or web portal and click Add Device. 4. Enter your Wi-Fi password and verify setup.',
-  },
-  {
-    id: 4,
-    document_id: 104,
-    title: 'Subscription Pricing Plans & Invoicing',
-    category: 'Pricing',
-    chunk_text: 'We offer three pricing tiers: Starter Plan is $19/month (1 user, core features). Professional Plan is $49/month (up to 5 team members, priority support, API access). Enterprise Plan starts at $199/month (unlimited seats, dedicated SLA, custom database integrations). Billed monthly or annually with a 15% discount.',
-  },
-  {
-    id: 5,
-    document_id: 105,
-    title: 'Payment Methods & Billing Cycles',
-    category: 'Pricing',
-    chunk_text: 'We accept Visa, Mastercard, American Express, PayPal, Apple Pay, and ACH Bank Transfers (for Enterprise accounts). All subscriptions auto-renew monthly on the billing anniversary date unless cancelled prior.',
   },
   {
     id: 6,
     document_id: 106,
     title: 'Shipping Times, Express & Rates',
     category: 'Shipping',
+    domain: 'ecommerce',
     chunk_text: 'Physical orders ship within 1-2 business days. Standard US Shipping takes 3-5 business days ($5.99 or free on orders over $50). Express Shipping takes 1-2 business days ($14.99). International shipping takes 7-14 business days depending on customs.',
-  },
-  {
-    id: 7,
-    document_id: 107,
-    title: 'International Shipping & Duties',
-    category: 'Shipping',
-    chunk_text: 'We ship to over 80 countries worldwide. International packages include real-time tracking. Please note customs, import duties, and VAT taxes are calculated at checkout or charged by local postal authorities depending on regional import laws.',
   },
   {
     id: 8,
     document_id: 108,
     title: '30-Day Refund & Return Policy',
     category: 'Refund',
+    domain: 'ecommerce',
     chunk_text: 'We offer a 30-day full refund guarantee on all hardware products. Items must be returned in original packaging with included accessories. Digital subscriptions are refundable within 14 days of initial purchase if unused.',
-  },
-  {
-    id: 9,
-    document_id: 109,
-    title: 'Return Shipping & Processing Timeline',
-    category: 'Refund',
-    chunk_text: 'To initiate a return, request a prepaid shipping label from support. Once your return package is delivered to our warehouse, inspecting and processing your refund to your original payment method takes 5 to 10 business days.',
-  },
-  {
-    id: 10,
-    document_id: 110,
-    title: 'Subscription Cancellation Policy',
-    category: 'Cancellation',
-    chunk_text: 'You can cancel your subscription at any time directly from Account Settings -> Billing -> Cancel Subscription, or by asking our support team. Cancellation takes effect at the end of your current paid billing period.',
   },
   {
     id: 11,
     document_id: 111,
     title: 'Order Cancellation Policy Before Shipment',
     category: 'Cancellation',
+    domain: 'ecommerce',
     chunk_text: 'Physical product orders can be cancelled for a 100% full refund before they enter the Shipped status (i.e. orders in Pending or Processing status). Once an order has shipped, it cannot be cancelled but can be returned under our 30-day money-back guarantee.',
   },
   {
@@ -309,62 +457,33 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     document_id: 112,
     title: 'Hardware 2-Year Limited Warranty',
     category: 'Warranty',
+    domain: 'ecommerce',
     chunk_text: 'All new Widget Pro devices come with a 2-year limited manufacturer warranty against defects in materials and workmanship. If your device malfunctions under normal use, we will repair or replace it free of charge.',
   },
+
+  // 🏢 ENTERPRISE SAAS CHUNKS
   {
-    id: 13,
-    document_id: 113,
-    title: 'Accidental Damage & Extended Warranty',
-    category: 'Warranty',
-    chunk_text: 'The standard 2-year warranty covers hardware defects but does not cover water damage, drops, or unauthorized modifications. Optional Extended Protection ($29/year) covers accidental drops and liquid spills.',
-  },
-  {
-    id: 14,
-    document_id: 114,
-    title: 'Account Security, Password Reset & 2FA',
-    category: 'Account',
-    chunk_text: 'Manage security under Account Settings -> Security. You can enable Two-Factor Authentication (2FA) via Authenticator App (Google/Authy) or SMS. If you forget your password, click Forgot Password on the login screen to receive a secure reset link via email.',
+    id: 4,
+    document_id: 104,
+    title: 'Subscription Pricing Plans & Invoicing',
+    category: 'Pricing',
+    domain: 'saas',
+    chunk_text: 'We offer three pricing tiers: Starter Plan is $19/month (1 user, core features). Professional Plan is $49/month (up to 5 team members, priority support, API access). Enterprise Plan starts at $199/month (unlimited seats, dedicated SLA, custom database integrations). Billed monthly or annually with a 15% discount.',
   },
   {
     id: 15,
     document_id: 115,
     title: 'Team Permissions & User Invites',
     category: 'Account',
+    domain: 'saas',
     chunk_text: 'Professional and Enterprise account owners can invite team members under Settings -> Team. Available roles include Admin (full control), Editor (can edit workflows & integrations), and Viewer (read-only monitoring access).',
-  },
-  {
-    id: 16,
-    document_id: 116,
-    title: 'Troubleshooting LED Error Light Codes',
-    category: 'Troubleshooting',
-    chunk_text: 'LED Status Indicators: Solid Blue = Connected & Ready. Flashing Blue = Pairing Mode. Flashing Red = Low Battery (charge device). Solid Red = Hardware Error (hold power button 10 seconds to factory reset).',
-  },
-  {
-    id: 17,
-    document_id: 117,
-    title: 'Offline Sync & Memory Buffer',
-    category: 'Troubleshooting',
-    chunk_text: 'If Wi-Fi drops, Widget Pro automatically stores up to 48 hours of event data in internal flash memory buffer. Once internet connectivity is restored, cached logs sync automatically without data loss.',
   },
   {
     id: 18,
     document_id: 118,
     title: 'REST API & Webhooks Integration',
     category: 'API',
+    domain: 'saas',
     chunk_text: 'We provide a REST API (v2) and Webhook events for custom integrations. API Keys can be generated under Developer Settings. Rate limit is 1,000 requests per minute per API key on Professional plans, and 10,000 requests/min on Enterprise.',
-  },
-  {
-    id: 19,
-    document_id: 120,
-    title: 'Data Privacy, GDPR & Security Compliance',
-    category: 'Terms',
-    chunk_text: 'We are SOC 2 Type II certified and fully compliant with GDPR and CCPA privacy standards. Customer data is encrypted at rest using AES-256 and in transit using TLS 1.3. We never sell customer personal data to third parties.',
-  },
-  {
-    id: 20,
-    document_id: 121,
-    title: 'Terms of Service & Terms of Use',
-    category: 'Terms',
-    chunk_text: 'By accessing our platform, you agree to our Terms of Use. Accounts are intended for registered individuals or organizations. Misuse, abuse, automated scraping, or unauthorized access attempts may lead to immediate account suspension.',
   },
 ];
