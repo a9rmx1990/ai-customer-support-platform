@@ -17,7 +17,7 @@ This guide walks you through setting up Supabase, n8n, and Next.js from scratch.
 ## Step 2: n8n Workflow Configuration
 
 1. Launch your n8n instance (Self-hosted via Docker or n8n Cloud).
-2. Create PostgreSQL and OpenAI Credentials in n8n.
+2. Create PostgreSQL and Google Gemini Credentials in n8n.
 3. Import the three workflow JSON files from `n8n/`:
    - `n8n/db-schema-setup.json` -> Run once to confirm DB setup.
    - `n8n/rag-ingestion.json` -> Run to split, embed, and store document chunks in `knowledge_chunks`.

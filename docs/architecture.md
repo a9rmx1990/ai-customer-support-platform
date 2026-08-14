@@ -21,7 +21,7 @@ This document details the architectural design, component interactions, data mod
   ├── Webhook Endpoint
   ├── Input Sanitizer & Session Normalizer
   ├── Postgres Chat Memory (n8n_chat_histories)
-  ├── OpenAI Chat Agent (GPT-5-mini / GPT-4o-mini)
+  ├── Google Gemini Chat Agent (gemini-1.5-flash)
   ├── pgvector Vector Store Tool (knowledge_chunks)
   ├── Database SQL Tools (get_customer, get_order_status, etc.)
   ├── Output Parser & Sanitizer
@@ -82,7 +82,7 @@ Vector store table storing chunked documentation and embeddings.
 - `id` (BIGSERIAL, PK)
 - `document_id` (BIGINT)
 - `chunk_text` (TEXT)
-- `embedding` (VECTOR(1536))
+- `embedding` (VECTOR(768))
 - `metadata` (JSONB)
 
 ---

@@ -145,7 +145,7 @@ export default function ArchitecturePage() {
               rag-ingestion.json
             </p>
             <p className="text-gray-400 leading-relaxed">
-              RAG pipeline that chunks documents (800/100), generates embeddings via OpenAI, and stores vectors in <code className="text-brand-300">knowledge_chunks</code>.
+              RAG pipeline that chunks documents (800/100), generates 768-dim embeddings via Google Gemini (text-embedding-004), and stores vectors in <code className="text-brand-300">knowledge_chunks</code>.
             </p>
           </div>
 

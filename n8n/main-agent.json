@@ -196,18 +196,22 @@
         "options": {}
       },
       "id": "e01565e3-2a9a-4c76-8977-fb20318fdf5d",
-      "name": "OpenAI Chat Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.3,
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
       "position": [
         896,
         224
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "vWLSNUQs8WmpsB0t",
-          "name": "n8n free OpenAI API credits"
+        "googlePalmApi": {
+          "id": "gemini-api-cred-id",
+          "name": "Google Gemini API"
         }
+      },
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
       }
     },
     {
@@ -261,22 +265,21 @@
     },
     {
       "parameters": {
-        "options": {
-          "dimensions": 1536
-        }
+        "modelName": "models/text-embedding-004",
+        "options": {}
       },
       "id": "a7dfc6d4-dce2-40a8-8d39-c50f9a6da2fe",
       "name": "KB Embeddings",
-      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
-      "typeVersion": 1.2,
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
       "position": [
         1152,
         432
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "vWLSNUQs8WmpsB0t",
-          "name": "n8n free OpenAI API credits"
+        "googlePalmApi": {
+          "id": "gemini-api-cred-id",
+          "name": "Google Gemini API"
         }
       }
     },
@@ -686,7 +689,7 @@
         ]
       ]
     },
-    "OpenAI Chat Model": {
+    "Google Gemini Chat Model": {
       "ai_languageModel": [
         [
           {

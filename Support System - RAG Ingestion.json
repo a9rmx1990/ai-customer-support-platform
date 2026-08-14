@@ -18,7 +18,7 @@
     },
     {
       "parameters": {
-        "content": "## 2. Chunk -> Embed -> Store (RAG)\\n\\nEmpty documents are skipped. Each document is chunked (Recursive splitter, 800/100), embedded with OpenAI `text-embedding-3-small` (1536 dims), and upserted into **pgvector table `knowledge_chunks`** (content column `chunk_text`, metadata carries `title` + `category`).\\n\\n**The main support agent retrieval tool MUST use table `knowledge_chunks`.**",
+        "content": "## 2. Chunk -> Embed -> Store (RAG)\\n\\nEmpty documents are skipped. Each document is chunked (Recursive splitter, 800/100), embedded with Google Gemini `text-embedding-004` (768 dims), and upserted into **pgvector table `knowledge_chunks`** (content column `chunk_text`, metadata carries `title` + `category`).\\n\\n**The main support agent retrieval tool MUST use table `knowledge_chunks`.**",
         "height": 300,
         "width": 420
       },
@@ -141,22 +141,21 @@
     },
     {
       "parameters": {
-        "options": {
-          "dimensions": 1536
-        }
+        "modelName": "models/text-embedding-004",
+        "options": {}
       },
       "id": "aaf00e26-e42c-4349-bc3c-d9669804509e",
-      "name": "OpenAI Embeddings",
-      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
-      "typeVersion": 1.2,
+      "name": "Google Gemini Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
       "position": [
         688,
         624
       ],
       "credentials": {
-        "openAiApi": {
-          "id": "vWLSNUQs8WmpsB0t",
-          "name": "n8n free OpenAI API credits"
+        "googlePalmApi": {
+          "id": "gemini-api-cred-id",
+          "name": "Google Gemini API"
         }
       }
     },
@@ -245,7 +244,7 @@
         ]
       ]
     },
-    "OpenAI Embeddings": {
+    "Google Gemini Embeddings": {
       "ai_embedding": [
         [
           {

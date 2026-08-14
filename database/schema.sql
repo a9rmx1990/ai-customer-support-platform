@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 11. Knowledge Base Chunks (pgvector 1536 dimensions)
+-- 11. Knowledge Base Chunks (pgvector 768 dimensions for Google Gemini text-embedding-004)
 CREATE TABLE IF NOT EXISTS knowledge_chunks (
     id SERIAL PRIMARY KEY,
     document_id INT REFERENCES knowledge_documents(document_id) ON DELETE CASCADE,
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS knowledge_chunks (
     category VARCHAR(50) NOT NULL,
     domain VARCHAR(50) DEFAULT 'medical',
     chunk_text TEXT NOT NULL,
-    embedding vector(1536)
+    embedding vector(768)
 );
 
 -- 12. Support Logs Audit Table
