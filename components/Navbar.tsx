@@ -1,13 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, MessageSquare, Ticket, Database, Layers, Stethoscope, LogIn, LogOut, User, Activity } from 'lucide-react';
+import { Bot, MessageSquare, Ticket, Database, Layers, Stethoscope, LogIn, LogOut, User, Activity, Menu, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Bot },
@@ -41,7 +43,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Navigation Links */}
+        {/* Navigation Links (Desktop) */}
         <nav className="hidden md:flex items-center gap-1 bg-surface-base p-1 rounded-xl border border-triage-border">
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -64,8 +66,8 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Auth Profile / Actions */}
-        <div className="flex items-center gap-3">
+        {/* Auth Profile / Actions & Mobile Hamburger */}
+        <div className="flex items-center gap-2">
           {user ? (
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 bg-surface-base px-3 py-1.5 rounded-xl border border-triage-border">
@@ -106,10 +108,46 @@ export default function Navbar() {
               </Link>
             </div>
           )}
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg bg-surface-base text-gray-400 hover:text-white border border-triage-border transition-colors ml-1"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-triage-border bg-surface-elevated p-3 space-y-1 font-body animate-in slide-in-from-top-2 duration-200">
+          {navLinks.map((link) => {
+            const Icon = link.icon;
+            const isActive = pathname === link.href || (link.href.startsWith('/chat') && pathname === '/chat');
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`w-full px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                  isActive
+                    ? 'bg-surface-base text-clinical-mint border border-triage-border-active font-semibold'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-surface-base'
+                }`}
+              >
+                <Icon className="w-4 h-4 text-clinical-mint" />
+                <span>{link.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </header>
   );
 }
+
 
 
