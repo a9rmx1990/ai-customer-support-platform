@@ -248,7 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const role = data.role ?? 'patient';
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
@@ -260,6 +260,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) return { success: false, error: error.message };
+
+    // If role is doctor, create doctor_profiles row
+    if (role === 'doctor' && authData?.user?.id) {
+      try {
+        await supabase.from('doctor_profiles').insert({
+          user_id: authData.user.id,
+          specialization: (data as any).specialization || 'General Practice',
+          verification_status: 'verified',
+        });
+      } catch {
+        // ignore
+      }
+    }
+
     setAppSessionCookie();
     return { success: true };
   }, []);

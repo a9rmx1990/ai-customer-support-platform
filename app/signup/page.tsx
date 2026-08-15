@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus, User, Mail, Calendar, UserCheck, Stethoscope, Lock } from 'lucide-react';
+import { UserPlus, User, Mail, Calendar, UserCheck, Stethoscope, Lock, Shield } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
@@ -14,8 +14,9 @@ export default function SignupPage() {
     name: '',
     email: '',
     password: '',
+    role: 'patient' as 'patient' | 'doctor',
     dob: '',
-    primary_doctor: 'Dr. Sarah Jenkins (Cardiology)',
+    specialization: 'Cardiology',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function SignupPage() {
     if (result.success) {
       router.push('/chat?domain=medical');
     } else {
-      setError(result.error || 'Registration failed. Please try again or sign in with Google.');
+      setError(result.error || 'Registration failed. Please try again.');
     }
   };
 
@@ -46,9 +47,9 @@ export default function SignupPage() {
         <div className="w-10 h-10 rounded-xl bg-surface-base border border-triage-border-active flex items-center justify-center text-clinical-mint mx-auto">
           <Stethoscope className="w-5 h-5" />
         </div>
-        <h1 className="text-xl font-display font-bold text-white tracking-tight">Register Patient Account</h1>
+        <h1 className="text-xl font-display font-bold text-white tracking-tight">Create Clinical Account</h1>
         <p className="text-xs text-gray-400 font-body">
-          Create your clinical profile for 24/7 AI health support, telehealth appointment booking, and diagnostic lab access.
+          Register as a Patient or Doctor to access clinical AI support and real-time medical consultations.
         </p>
       </div>
 
@@ -64,8 +65,24 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Account Role Dropdown */}
           <div className="space-y-1">
-            <label className="text-[11px] font-mono font-medium text-gray-300">Full Legal Name</label>
+            <label className="text-[11px] font-mono font-bold text-clinical-mint uppercase tracking-wider">Account Role</label>
+            <div className="relative">
+              <Shield className="w-4 h-4 absolute left-3 top-3 text-clinical-mint" />
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'patient' | 'doctor' })}
+                className="w-full bg-surface-base text-white text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-clinical-mint/50 focus:outline-none focus:border-clinical-mint font-mono font-bold"
+              >
+                <option value="patient">Patient Account</option>
+                <option value="doctor">Verified Doctor Account</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-mono font-medium text-gray-300">Full Name</label>
             <div className="relative">
               <User className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
               <input
@@ -73,7 +90,7 @@ export default function SignupPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Eleanor Vance"
+                placeholder={formData.role === 'doctor' ? 'e.g. Dr. Sarah Jenkins' : 'e.g. Eleanor Vance'}
                 className="w-full bg-surface-base text-gray-100 placeholder-gray-500 text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
               />
             </div>
@@ -88,7 +105,7 @@ export default function SignupPage() {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="eleanor@example.com"
+                placeholder={formData.role === 'doctor' ? 'doctor@example.com' : 'patient@example.com'}
                 className="w-full bg-surface-base text-gray-100 placeholder-gray-500 text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
               />
             </div>
@@ -109,60 +126,63 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[11px] font-mono font-medium text-gray-300">Date of Birth</label>
-            <div className="relative">
-              <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
-              <input
-                type="date"
-                required
-                value={formData.dob}
-                onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                className="w-full bg-surface-base text-gray-100 text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-mono"
-              />
+          {formData.role === 'doctor' ? (
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono font-medium text-gray-300">Medical Specialization</label>
+              <div className="relative">
+                <Stethoscope className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
+                <select
+                  value={formData.specialization}
+                  onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                  className="w-full bg-surface-base text-gray-100 text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
+                >
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Dermatology">Dermatology</option>
+                  <option value="Neurology">Neurology</option>
+                  <option value="Internal Medicine">Internal Medicine</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                </select>
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] font-mono font-medium text-gray-300">Primary Care Physician</label>
-            <div className="relative">
-              <UserCheck className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
-              <select
-                value={formData.primary_doctor}
-                onChange={(e) => setFormData({ ...formData, primary_doctor: e.target.value })}
-                className="w-full bg-surface-base text-gray-100 text-xs pl-9 pr-3 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-mono"
-              >
-                <option value="Dr. Sarah Jenkins (Cardiology)">Dr. Sarah Jenkins (Cardiology)</option>
-                <option value="Dr. Marcus Vance (Neurology)">Dr. Marcus Vance (Neurology)</option>
-                <option value="Dr. Emily Chen (Internal Medicine)">Dr. Emily Chen (Internal Medicine)</option>
-              </select>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono font-medium text-gray-300">Date of Birth</label>
+              <div className="relative">
+                <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
+                <input
+                  type="date"
+                  value={formData.dob}
+                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                  className="w-full bg-surface-base text-gray-100 text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {error && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs font-mono text-rose-300">
-              {error}
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2 font-mono">
+              <span className="font-medium">{error}</span>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-2"
+            className="w-full py-2.5 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-4"
           >
             <UserPlus className="w-4 h-4" />
-            <span>{loading ? 'Registering Account...' : 'Complete Patient Registration'}</span>
+            <span>{loading ? 'Creating Account...' : `Register as ${formData.role === 'doctor' ? 'Doctor' : 'Patient'}`}</span>
           </button>
         </form>
 
-        <div className="pt-2 text-center text-xs font-mono text-gray-400">
+        <div className="pt-2 text-center text-xs text-gray-400 font-body border-t border-triage-border">
           Already registered?{' '}
           <Link href="/login" className="text-clinical-mint font-semibold hover:underline">
-            Sign In to Portal
+            Sign In Here
           </Link>
         </div>
       </div>
     </div>
   );
 }
-
