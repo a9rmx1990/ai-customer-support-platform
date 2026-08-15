@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Database, Search, Sparkles, Filter, Stethoscope, ShoppingBag, Building2, Plus, X, CheckCircle2, FileText } from 'lucide-react';
+import { Database, Search, Sparkles, Filter, Stethoscope, ShoppingBag, Building2, Plus, X, CheckCircle2, FileText, Upload, FileUp } from 'lucide-react';
 import { KNOWLEDGE_CHUNKS, KnowledgeChunk, AppDomain } from '@/lib/mock-data';
 
 export default function KnowledgePage() {
@@ -12,6 +12,8 @@ export default function KnowledgePage() {
 
   // Add Document Modal state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [ingestMode, setIngestMode] = useState<'file' | 'text'>('file');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newDomain, setNewDomain] = useState<AppDomain>('medical');
   const [newCategory, setNewCategory] = useState('policy');
@@ -38,22 +40,55 @@ export default function KnowledgePage() {
     });
   }, [chunksList, searchQuery, selectedCategory, selectedDomain]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      if (!newTitle) {
+        setNewTitle(file.name.replace(/\.[^/.]+$/, ''));
+      }
+    }
+  };
+
   const handleAddKnowledgeDoc = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newContent.trim() || submitting) return;
+    if (submitting) return;
+
+    if (ingestMode === 'file' && !selectedFile) {
+      alert('Please select a PDF or Text file to upload.');
+      return;
+    }
+    if (ingestMode === 'text' && (!newTitle.trim() || !newContent.trim())) {
+      alert('Please fill out the document title and policy text.');
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/knowledge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTitle,
-          domain: newDomain,
-          category: newCategory,
-          chunk_text: newContent,
-        }),
-      });
+      let res;
+      if (ingestMode === 'file' && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('title', newTitle || selectedFile.name.replace(/\.[^/.]+$/, ''));
+        formData.append('domain', newDomain);
+        formData.append('category', newCategory);
+
+        res = await fetch('/api/knowledge', {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        res = await fetch('/api/knowledge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: newTitle,
+            domain: newDomain,
+            category: newCategory,
+            chunk_text: newContent,
+          }),
+        });
+      }
 
       const data = await res.json();
 
@@ -61,9 +96,12 @@ export default function KnowledgePage() {
         setChunksList((prev) => [data.chunk, ...prev]);
         setNewTitle('');
         setNewContent('');
+        setSelectedFile(null);
         setShowAddModal(false);
-        setSuccessToast(`Document #${data.chunk.id} successfully indexed into ${newDomain.toUpperCase()} vector store!`);
+        setSuccessToast(data.message || `Document #${data.chunk.id} successfully indexed into ${newDomain.toUpperCase()} vector store!`);
         setTimeout(() => setSuccessToast(null), 4000);
+      } else {
+        alert(data.error || 'Failed to parse and index document.');
       }
     } catch (err) {
       console.error('Ingestion failed:', err);
@@ -117,7 +155,7 @@ export default function KnowledgePage() {
             className="px-3.5 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Document</span>
+            <span>Upload / Add Document</span>
           </button>
         </div>
       </div>
@@ -242,8 +280,8 @@ export default function KnowledgePage() {
           <div className="surface-overlay w-full max-w-lg p-6 rounded-2xl border border-triage-border shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-triage-border">
               <h3 className="font-display font-bold text-sm text-white flex items-center gap-2">
-                <FileText className="w-4 h-4 text-clinical-mint" />
-                <span>Ingest New Knowledge Document</span>
+                <FileUp className="w-4 h-4 text-clinical-mint" />
+                <span>Ingest Knowledge Document</span>
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -253,7 +291,57 @@ export default function KnowledgePage() {
               </button>
             </div>
 
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-2 p-1 bg-surface-base rounded-xl border border-triage-border text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setIngestMode('file')}
+                className={`py-1.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                  ingestMode === 'file' ? 'bg-clinical-mint text-ink' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>PDF / Document File</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIngestMode('text')}
+                className={`py-1.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                  ingestMode === 'text' ? 'bg-clinical-mint text-ink' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Manual Text Input</span>
+              </button>
+            </div>
+
             <form onSubmit={handleAddKnowledgeDoc} className="space-y-3.5 text-xs font-body">
+              {ingestMode === 'file' ? (
+                <div className="space-y-2">
+                  <label className="block text-gray-300 font-medium font-mono text-[11px]">Upload PDF or Text File (.pdf, .txt, .md)</label>
+                  <div className="border-2 border-dashed border-triage-border hover:border-clinical-mint/50 rounded-xl p-4 text-center space-y-2 bg-surface-base transition-colors relative cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".pdf,.txt,.md,.json"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <Upload className="w-6 h-6 text-clinical-mint mx-auto" />
+                    {selectedFile ? (
+                      <div className="text-xs font-mono text-clinical-mint space-y-0.5">
+                        <p className="font-bold">{selectedFile.name}</p>
+                        <p className="text-[10px] text-gray-400">{(selectedFile.size / 1024).toFixed(1)} KB • Ready for PDF Vector Parsing</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-gray-200">Click or drag & drop PDF file here</p>
+                        <p className="text-[10px] text-gray-500 font-mono">Supports PDF, TXT, Markdown, and JSON files</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="space-y-1">
                 <label className="block text-gray-300 font-medium font-mono text-[11px]">Document Title</label>
                 <input
@@ -297,17 +385,19 @@ export default function KnowledgePage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-gray-300 font-medium font-mono text-[11px]">Document Text / Policy Content</label>
-                <textarea
-                  rows={5}
-                  required
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Paste clinic guidelines, refund policies, or product specs here. The AI will vector index this content automatically..."
-                  className="w-full bg-surface-base text-gray-100 text-xs p-3 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body leading-relaxed"
-                />
-              </div>
+              {ingestMode === 'text' && (
+                <div className="space-y-1">
+                  <label className="block text-gray-300 font-medium font-mono text-[11px]">Document Text / Policy Content</label>
+                  <textarea
+                    rows={5}
+                    required
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    placeholder="Paste clinic guidelines, refund policies, or product specs here. The AI will vector index this content automatically..."
+                    className="w-full bg-surface-base text-gray-100 text-xs p-3 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body leading-relaxed"
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
@@ -322,7 +412,7 @@ export default function KnowledgePage() {
                   disabled={submitting}
                   className="px-4 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs transition-colors disabled:opacity-50"
                 >
-                  {submitting ? 'Indexing Vectors...' : 'Index Document Chunk'}
+                  {submitting ? 'Parsing PDF & Indexing...' : ingestMode === 'file' ? 'Upload & Index PDF' : 'Index Document Chunk'}
                 </button>
               </div>
             </form>
@@ -332,5 +422,6 @@ export default function KnowledgePage() {
     </div>
   );
 }
+
 
 
