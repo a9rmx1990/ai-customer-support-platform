@@ -31,38 +31,38 @@ export default function KnowledgePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
-      <div className="glass-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-gray-800">
+      <div className="surface-elevated p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-triage-border">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shadow-lg">
-            <Database className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-surface-base border border-triage-border-active flex items-center justify-center text-clinical-mint">
+            <Database className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              Multi-Domain RAG Vector Store
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
+            <h1 className="text-xl font-display font-bold text-white tracking-tight flex items-center gap-2">
+              Multi-Domain RAG Vector Knowledge Store
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-clinical-mint/10 text-clinical-mint border border-clinical-mint/20">
                 pgvector 1536-dim
               </span>
             </h1>
-            <p className="text-xs text-gray-400">
-              Inspect indexed vector knowledge chunks across Medical / Clinic, E-Commerce, and SaaS domains.
+            <p className="text-xs text-gray-400 font-body">
+              Inspect indexed vector knowledge chunks across Medical Clinic, Retail Logistics, and Enterprise SaaS domains.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-900/80 px-3.5 py-2 rounded-xl border border-gray-800">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
+        <div className="flex items-center gap-2 text-xs font-mono text-gray-400 bg-surface-base px-3 py-1.5 rounded-lg border border-triage-border">
+          <Sparkles className="w-4 h-4 text-clinical-mint" />
           <span>Total Indexed Chunks: <strong className="text-white">{KNOWLEDGE_CHUNKS.length}</strong></span>
         </div>
       </div>
 
       {/* Domain Selection Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 font-mono text-xs scrollbar-none">
         <button
           onClick={() => setSelectedDomain('all')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
             selectedDomain === 'all'
-              ? 'bg-gray-800 text-white border border-gray-700 shadow-sm'
-              : 'bg-gray-900/60 text-gray-400 hover:text-white'
+              ? 'bg-clinical-mint text-ink'
+              : 'bg-surface-elevated text-gray-400 hover:text-white border border-triage-border'
           }`}
         >
           <span>All Domains ({KNOWLEDGE_CHUNKS.length})</span>
@@ -70,60 +70,60 @@ export default function KnowledgePage() {
 
         <button
           onClick={() => setSelectedDomain('medical')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
             selectedDomain === 'medical'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
-              : 'bg-gray-900/60 text-gray-400 hover:text-emerald-300'
+              ? 'bg-clinical-mint text-ink'
+              : 'bg-surface-elevated text-gray-400 hover:text-clinical-mint border border-triage-border'
           }`}
         >
-          <Stethoscope className="w-4 h-4 text-emerald-400" />
-          <span>🩺 Medical / Clinic ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'medical').length})</span>
+          <Stethoscope className="w-4 h-4" />
+          <span>Medical ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'medical').length})</span>
         </button>
 
         <button
           onClick={() => setSelectedDomain('ecommerce')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
             selectedDomain === 'ecommerce'
-              ? 'bg-brand-600 text-white shadow-lg shadow-brand-950/50'
-              : 'bg-gray-900/60 text-gray-400 hover:text-brand-300'
+              ? 'bg-signal-amber text-ink'
+              : 'bg-surface-elevated text-gray-400 hover:text-signal-amber border border-triage-border'
           }`}
         >
-          <ShoppingBag className="w-4 h-4 text-brand-400" />
-          <span>🛍️ Shopping & Delivery ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'ecommerce').length})</span>
+          <ShoppingBag className="w-4 h-4" />
+          <span>Retail ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'ecommerce').length})</span>
         </button>
 
         <button
           onClick={() => setSelectedDomain('saas')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
             selectedDomain === 'saas'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/50'
-              : 'bg-gray-900/60 text-gray-400 hover:text-purple-300'
+              ? 'bg-signal-violet text-white'
+              : 'bg-surface-elevated text-gray-400 hover:text-signal-violet border border-triage-border'
           }`}
         >
-          <Building2 className="w-4 h-4 text-purple-400" />
-          <span>🏢 Enterprise SaaS ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'saas').length})</span>
+          <Building2 className="w-4 h-4" />
+          <span>SaaS ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'saas').length})</span>
         </button>
       </div>
 
       {/* Search & Category Controls */}
-      <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between border border-gray-800">
+      <div className="surface-elevated p-3.5 rounded-2xl flex flex-col md:flex-row gap-3 items-center justify-between border border-triage-border">
         <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search vector knowledge chunks..."
-            className="w-full bg-gray-950 text-gray-100 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-emerald-500"
+            placeholder="Search vector knowledge chunks or title..."
+            className="w-full bg-surface-base text-gray-100 placeholder-gray-500 text-xs pl-9 pr-3.5 py-2.5 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-2 w-full md:w-auto font-mono text-xs">
+          <Filter className="w-3.5 h-3.5 text-gray-400" />
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-gray-950 text-gray-200 text-xs px-3 py-2.5 rounded-xl border border-gray-800 focus:outline-none capitalize"
+            className="bg-surface-base text-gray-200 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none capitalize font-mono"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -135,34 +135,34 @@ export default function KnowledgePage() {
       </div>
 
       {/* Grid of Knowledge Chunks */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
         {filteredChunks.map((chunk) => (
           <div
             key={chunk.id}
-            className="glass-panel p-5 rounded-2xl border border-gray-800 flex flex-col justify-between space-y-3 hover:border-gray-700 transition-all shadow-sm"
+            className="surface-elevated p-4 rounded-xl border border-triage-border flex flex-col justify-between space-y-3 hover:border-triage-border-active transition-colors"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
+                  className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border uppercase ${
                     chunk.domain === 'medical'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      ? 'badge-mint'
                       : chunk.domain === 'ecommerce'
-                      ? 'bg-brand-500/10 text-brand-400 border-brand-500/30'
-                      : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                      ? 'badge-amber'
+                      : 'badge-violet'
                   }`}
                 >
                   {chunk.domain} • {chunk.category}
                 </span>
-                <span className="text-[10px] text-gray-500 font-mono">ID: #{chunk.id}</span>
+                <span className="text-[10px] text-gray-500 font-mono">#{chunk.id}</span>
               </div>
 
-              <h3 className="font-bold text-sm text-white line-clamp-1">{chunk.title}</h3>
-              <p className="text-xs text-gray-300 leading-relaxed line-clamp-4">{chunk.chunk_text}</p>
+              <h3 className="font-display font-bold text-sm text-white line-clamp-1">{chunk.title}</h3>
+              <p className="text-xs text-gray-300 font-body leading-relaxed line-clamp-4">{chunk.chunk_text}</p>
             </div>
 
-            <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between text-[10px] text-gray-500">
-              <span>Embedding: <code className="text-emerald-400">text-embedding-3-small</code></span>
+            <div className="pt-2 border-t border-triage-border flex items-center justify-between text-[10px] font-mono text-gray-500">
+              <span>Embedding: <code className="text-clinical-mint">text-embedding-004</code></span>
               <span>Doc #{chunk.document_id}</span>
             </div>
           </div>
@@ -171,3 +171,4 @@ export default function KnowledgePage() {
     </div>
   );
 }
+
