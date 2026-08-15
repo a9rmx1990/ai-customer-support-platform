@@ -1,19 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LogIn, User, Stethoscope, CheckCircle2, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, setDemoUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const redirectTo = searchParams.get('redirect') || '/chat?domain=medical';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +32,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      router.push('/chat?domain=medical');
+      router.push(redirectTo);
     } else {
       setError(result.error || 'Invalid email or password.');
     }
@@ -37,7 +40,7 @@ export default function LoginPage() {
 
   const handleQuickLogin = (demoId: string) => {
     setDemoUser(demoId);
-    router.push('/chat?domain=medical');
+    router.push(redirectTo);
   };
 
   return (
@@ -154,4 +157,10 @@ export default function LoginPage() {
   );
 }
 
-
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="max-w-md mx-auto px-4 py-14 text-center text-xs text-gray-400 font-mono">Loading portal...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}

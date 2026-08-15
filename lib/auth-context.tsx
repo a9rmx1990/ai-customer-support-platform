@@ -99,6 +99,21 @@ async function buildUserSession(authUser: User): Promise<UserSession | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Client-side Cookie Helpers (for middleware route protection)
+// ---------------------------------------------------------------------------
+function setAppSessionCookie() {
+  if (typeof window === 'undefined') return;
+  const maxAgeSeconds = 60 * 60 * 24 * 7; // 7 days
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `app_session=1; path=/; max-age=${maxAgeSeconds}; SameSite=Lax${secureFlag}`;
+}
+
+function clearAppSessionCookie() {
+  if (typeof window === 'undefined') return;
+  document.cookie = 'app_session=; path=/; max-age=0; SameSite=Lax';
+}
+
+// ---------------------------------------------------------------------------
 // Demo fallback session (used only when Supabase is not yet configured)
 // ---------------------------------------------------------------------------
 const DEMO_SESSION: UserSession = {
@@ -125,10 +140,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // No Supabase creds — use demo session for UI preview
       const saved = typeof window !== 'undefined' ? localStorage.getItem('app_user_session') : null;
       if (saved) {
-        try { setUser(JSON.parse(saved)); } catch { setUser(DEMO_SESSION); }
+        try {
+          setUser(JSON.parse(saved));
+          setAppSessionCookie();
+        } catch {
+          setUser(DEMO_SESSION);
+          setAppSessionCookie();
+        }
       } else {
         setUser(DEMO_SESSION);
         localStorage.setItem('app_user_session', JSON.stringify(DEMO_SESSION));
+        setAppSessionCookie();
       }
       setLoading(false);
       return;
@@ -140,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         const userSession = await buildUserSession(session.user);
         setUser(userSession);
+        setAppSessionCookie();
       }
       setLoading(false);
     });
@@ -150,8 +173,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           const userSession = await buildUserSession(session.user);
           setUser(userSession);
+          setAppSessionCookie();
         } else {
           setUser(null);
+          clearAppSessionCookie();
         }
       }
     );
@@ -176,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res.ok && data.user) {
           setUser(data.user);
           localStorage.setItem('app_user_session', JSON.stringify(data.user));
+          setAppSessionCookie();
           return { success: true };
         }
         return { success: false, error: data.error || 'Invalid email or password.' };
@@ -186,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { success: false, error: error.message };
+    setAppSessionCookie();
     return { success: true };
   }, []);
 
@@ -211,6 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res.ok && resData.user) {
           setUser(resData.user);
           localStorage.setItem('app_user_session', JSON.stringify(resData.user));
+          setAppSessionCookie();
           return { success: true };
         }
         return { success: false, error: resData.error || 'Registration failed.' };
@@ -232,15 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) return { success: false, error: error.message };
-
-    // If patient role, create patient_profile row after sign-up
-    // (doctor profile is created separately via doctor onboarding flow)
-    if (role === 'patient' && data.dob) {
-      // Profile is auto-created by handle_new_user trigger
-      // Patient profile needs a second call after session is established
-      // Handled by the onAuthStateChange listener
-    }
-
+    setAppSessionCookie();
     return { success: true };
   }, []);
 
@@ -260,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.user) {
           setUser(data.user);
           localStorage.setItem('app_user_session', JSON.stringify(data.user));
+          setAppSessionCookie();
           return true;
         }
         return false;
@@ -272,6 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/` },
     });
+    if (!error) setAppSessionCookie();
     return !error;
   }, []);
 
@@ -281,6 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       provider: 'google',
       token: credential,
     });
+    if (!error) setAppSessionCookie();
     return !error;
   }, []);
 
@@ -293,6 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     localStorage.removeItem('app_user_session');
+    clearAppSessionCookie();
     // Hard redirect to ensure all protected route guards re-evaluate
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
@@ -305,6 +329,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setDemoUser = useCallback((_userId: string) => {
     if (!supabaseConfigured) {
       setUser(DEMO_SESSION);
+      localStorage.setItem('app_user_session', JSON.stringify(DEMO_SESSION));
+      setAppSessionCookie();
     }
   }, []);
 
