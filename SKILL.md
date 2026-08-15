@@ -2386,3 +2386,2115 @@ Finally report:
 * Password hashing algorithm
 * How invalid credentials are rejected
 * Test results
+# SKILL.md
+
+# Production-Grade Real-World Medical AI Agent with Supabase
+
+## 1. Purpose
+
+Transform the existing Medical AI Assistant project from a **bot simulation/demo** into a **real-world multi-user medical appointment platform**.
+
+The existing UI, AI agent, workflows, and features should be preserved where practical.
+
+The objective is **not to rebuild the application from scratch**.
+
+The objective is to replace simulated data and fake identities with:
+
+* Real user authentication
+* Real patient accounts
+* Real doctor accounts
+* Real doctor profiles
+* Real doctor verification
+* Real doctor availability
+* Real appointment records
+* Real patient ↔ doctor relationships
+* Real database persistence
+* Real authorization
+* Real AI tool execution
+* Real Supabase integration
+* Real logout/login behavior
+* Production-grade security
+
+---
+
+# 2. Core Architecture
+
+The final architecture must follow:
+
+```text
+                         USER
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │   FRONTEND APP  │
+                  └────────┬────────┘
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │ SUPABASE AUTH   │
+                  └────────┬────────┘
+                           │
+                     Authenticated
+                         Session
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+           PATIENT       DOCTOR        ADMIN
+              │            │            │
+              └────────────┼────────────┘
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │   AI AGENT      │
+                  │ LangGraph/etc.  │
+                  └────────┬────────┘
+                           │
+                     Trusted Tools
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │ BACKEND / API    │
+                  └────────┬────────┘
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │    SUPABASE      │
+                  │                 │
+                  │ Auth             │
+                  │ PostgreSQL       │
+                  │ RLS              │
+                  │ Storage          │
+                  │ Realtime         │
+                  └─────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+            USERS        DOCTORS    APPOINTMENTS
+```
+
+### Fundamental principle
+
+```text
+LLM ≠ Database
+LLM ≠ Doctor
+LLM ≠ Patient
+LLM ≠ Appointment System
+
+LLM → orchestrates trusted application tools
+```
+
+The AI must never become the source of truth.
+
+**Supabase/PostgreSQL is the source of truth.**
+
+---
+
+# 3. Replace the Existing Bot Simulation
+
+The existing project may contain:
+
+```text
+Bot Doctor
+Bot Patient
+Bot Receptionist
+Random Doctor
+Demo User
+Mock Appointment
+Fake Doctor
+Hardcoded Patient
+```
+
+These must NOT be used in production.
+
+Remove hardcoded production data such as:
+
+```javascript
+const doctors = [
+    {
+        name: "Dr. Random",
+        id: "doctor-1"
+    }
+];
+```
+
+Replace it with real Supabase queries.
+
+Correct:
+
+```text
+Frontend
+   ↓
+Backend/service
+   ↓
+Supabase
+   ↓
+doctor_profiles
+   ↓
+Real doctor
+```
+
+Mock data may only exist inside:
+
+```text
+tests/
+development/
+seed/
+fixtures/
+```
+
+It must never silently appear in production.
+
+---
+
+# 4. Supabase Is the Backend Foundation
+
+Use Supabase for:
+
+```text
+Supabase Auth
+PostgreSQL
+Row Level Security
+Storage
+Realtime
+Database migrations
+```
+
+The application must connect to a real Supabase project.
+
+Do NOT use an in-memory database as the primary production database.
+
+Do NOT use frontend-only state as persistent application state.
+
+---
+
+# 5. Supabase Project Configuration
+
+Configure:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Rules:
+
+### Frontend
+
+The frontend may use:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+```
+
+The frontend must NEVER contain:
+
+```text
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+### Server
+
+The service-role key may only exist in:
+
+```text
+server environment
+secure backend environment variables
+deployment secret manager
+```
+
+Never commit secrets to Git.
+
+Never place service-role credentials in:
+
+```text
+React
+Next.js client components
+browser JavaScript
+public/
+.env committed to Git
+```
+
+---
+
+# 6. Authentication
+
+Use **Supabase Auth** as the application's authentication system.
+
+Required functionality:
+
+```text
+Sign Up
+Login
+Logout
+Session persistence
+Session restoration
+Password reset
+Email verification where appropriate
+```
+
+The application startup flow must be:
+
+```text
+Application Starts
+       ↓
+Check Supabase Session
+       │
+       ├── No Session
+       │      ↓
+       │    Login
+       │
+       └── Valid Session
+              ↓
+           Load User
+              ↓
+        Determine Role
+              ↓
+           Dashboard
+```
+
+Never open the authenticated dashboard for an unauthenticated user.
+
+---
+
+# 7. Logout Must Work Correctly
+
+The current application has reverse logout behavior where the user may reach the dashboard and then logout incorrectly.
+
+Fix this.
+
+Correct:
+
+```text
+Dashboard
+   ↓
+Logout
+   ↓
+supabase.auth.signOut()
+   ↓
+Session invalidated
+   ↓
+Login page
+```
+
+After logout:
+
+* Clear authenticated frontend state
+* Clear cached private data
+* Redirect to login
+* Prevent protected routes from rendering
+* Prevent API requests using stale authentication state
+
+A logged-out user must not be able to access:
+
+```text
+/dashboard
+/patient
+/doctor
+/appointments
+/profile
+```
+
+or equivalent protected routes.
+
+---
+
+# 8. Database Architecture
+
+Use PostgreSQL through Supabase.
+
+Recommended tables:
+
+```text
+profiles
+patient_profiles
+doctor_profiles
+doctor_availability
+doctor_schedule_exceptions
+appointments
+notifications
+audit_logs
+```
+
+Supabase Auth maintains authentication identities.
+
+Application tables reference the authenticated user's ID.
+
+---
+
+# 9. Profiles Table
+
+Create a general profile table:
+
+```text
+profiles
+--------------------------------
+id
+full_name
+role
+phone
+avatar_url
+created_at
+updated_at
+```
+
+Where:
+
+```text
+id = auth.users.id
+```
+
+Roles:
+
+```text
+patient
+doctor
+admin
+```
+
+Do not rely only on frontend state to determine a user's role.
+
+The backend/database must enforce authorization.
+
+---
+
+# 10. Patient Profiles
+
+Create:
+
+```text
+patient_profiles
+--------------------------------
+id
+user_id
+date_of_birth
+gender
+emergency_contact
+created_at
+updated_at
+```
+
+Relationship:
+
+```text
+auth.users
+    │
+    └── profiles
+            │
+            └── patient_profiles
+```
+
+The `user_id` must reference the authenticated user.
+
+---
+
+# 11. Doctor Profiles
+
+Create:
+
+```text
+doctor_profiles
+--------------------------------
+id
+user_id
+specialization
+license_number
+bio
+experience_years
+consultation_fee
+verification_status
+created_at
+updated_at
+```
+
+Possible verification statuses:
+
+```text
+pending
+verified
+rejected
+suspended
+```
+
+Only verified doctors should normally be available for appointment booking.
+
+---
+
+# 12. Real Doctor Accounts
+
+Doctors are real authenticated users.
+
+Example:
+
+```text
+auth.users
+--------------------------------
+id: abc123
+email: rahul@example.com
+```
+
+```text
+profiles
+--------------------------------
+id: abc123
+full_name: Rahul Sharma
+role: doctor
+```
+
+```text
+doctor_profiles
+--------------------------------
+user_id: abc123
+specialization: Cardiology
+verification_status: verified
+```
+
+Therefore:
+
+```text
+Dr. Rahul Sharma
+```
+
+is a real account backed by Supabase.
+
+It is NOT:
+
+```text
+Bot Doctor
+```
+
+and NOT an LLM-generated identity.
+
+---
+
+# 13. Doctor Registration
+
+Doctor onboarding should follow:
+
+```text
+Doctor Sign Up
+       ↓
+Create Supabase Auth account
+       ↓
+Create profile
+       ↓
+Submit doctor information
+       ↓
+verification_status = pending
+       ↓
+Admin reviews
+       ↓
+verified
+       ↓
+Doctor becomes bookable
+```
+
+Never allow a user to become a verified doctor simply because the frontend sends:
+
+```json
+{
+  "role": "doctor"
+}
+```
+
+Role changes must be protected.
+
+---
+
+# 14. Doctor Availability
+
+Create:
+
+```text
+doctor_availability
+--------------------------------
+id
+doctor_id
+day_of_week
+start_time
+end_time
+is_available
+created_at
+updated_at
+```
+
+For exceptions:
+
+```text
+doctor_schedule_exceptions
+--------------------------------
+id
+doctor_id
+date
+start_time
+end_time
+status
+reason
+```
+
+Possible exception statuses:
+
+```text
+available
+unavailable
+leave
+holiday
+```
+
+Availability must be calculated from real database records.
+
+The AI must never invent availability.
+
+---
+
+# 15. Appointment Table
+
+Create:
+
+```text
+appointments
+--------------------------------
+id
+patient_id
+doctor_id
+scheduled_start
+scheduled_end
+status
+reason
+notes
+created_at
+updated_at
+```
+
+Possible statuses:
+
+```text
+requested
+confirmed
+cancelled
+completed
+no_show
+rescheduled
+```
+
+Relationship:
+
+```text
+Patient
+   │
+   │ patient_id
+   ▼
+Appointment
+   │
+   │ doctor_id
+   ▼
+Doctor
+```
+
+This is the real relationship between two users.
+
+---
+
+# 16. Appointment Booking
+
+The complete flow:
+
+```text
+User
+ ↓
+AI Agent
+ ↓
+Understand appointment request
+ ↓
+Collect missing information
+ ↓
+Search real doctors
+ ↓
+Check real availability
+ ↓
+Show available slots
+ ↓
+User chooses slot
+ ↓
+Ask for confirmation
+ ↓
+User confirms
+ ↓
+Backend validates slot again
+ ↓
+Create appointment
+ ↓
+Return real appointment
+ ↓
+Notify patient/doctor
+```
+
+Example:
+
+```text
+User:
+"I want a cardiologist tomorrow."
+```
+
+AI:
+
+```text
+search_doctors("cardiology")
+```
+
+Backend:
+
+```text
+Dr. Rahul Sharma
+Dr. Priya Rao
+```
+
+AI:
+
+```text
+get_doctor_availability(
+    doctor_id = actual_database_id,
+    date = tomorrow
+)
+```
+
+Backend returns actual slots.
+
+The AI presents those slots.
+
+User selects one.
+
+AI requests confirmation.
+
+Only after confirmation:
+
+```text
+book_appointment()
+```
+
+---
+
+# 17. Never Trust AI-Generated IDs
+
+The AI must NEVER invent:
+
+```text
+doctor_id
+patient_id
+appointment_id
+slot_id
+user_id
+```
+
+Correct:
+
+```text
+AI
+ ↓
+search_doctors()
+ ↓
+Supabase
+ ↓
+actual doctor_id
+ ↓
+AI
+ ↓
+get_availability(doctor_id)
+```
+
+The IDs passed into subsequent operations must originate from trusted tool responses.
+
+---
+
+# 18. Never Trust Frontend Identity
+
+Do not accept:
+
+```json
+{
+  "patient_id": "some-id"
+}
+```
+
+from the browser as the authoritative identity.
+
+Instead:
+
+```text
+Supabase Auth Session
+        ↓
+Authenticated User ID
+        ↓
+profiles
+        ↓
+patient_profiles
+        ↓
+patient_id
+```
+
+The backend determines who is making the request.
+
+---
+
+# 19. AI Agent Tools
+
+The AI should have controlled tools such as:
+
+```text
+search_doctors
+get_doctor_profile
+get_doctor_availability
+book_appointment
+get_my_appointments
+get_appointment
+cancel_appointment
+request_reschedule
+get_my_profile
+```
+
+Optional:
+
+```text
+send_notification
+create_support_request
+```
+
+The AI should NOT receive unrestricted SQL access.
+
+Bad:
+
+```text
+LLM
+ ↓
+raw SQL
+ ↓
+entire database
+```
+
+Good:
+
+```text
+LLM
+ ↓
+restricted tool
+ ↓
+backend service
+ ↓
+authorization
+ ↓
+Supabase
+```
+
+---
+
+# 20. Tool Contracts
+
+Tools must use strict schemas.
+
+Example:
+
+```typescript
+searchDoctors({
+    specialization?: string,
+    date?: string
+})
+```
+
+```typescript
+getDoctorAvailability({
+    doctorId: string,
+    date: string
+})
+```
+
+```typescript
+bookAppointment({
+    doctorId: string,
+    slotId: string,
+    reason?: string
+})
+```
+
+Notice:
+
+```text
+patientId
+```
+
+does not need to come from the LLM.
+
+The backend obtains the authenticated patient.
+
+---
+
+# 21. AI Agent State
+
+For LangGraph or equivalent orchestration:
+
+```typescript
+type MedicalAgentState = {
+    userId: string;
+    role: "patient" | "doctor" | "admin";
+
+    intent?: string;
+
+    specialization?: string;
+    doctorId?: string;
+
+    requestedDate?: string;
+    selectedSlotId?: string;
+
+    appointmentId?: string;
+
+    awaitingConfirmation?: boolean;
+
+    error?: string;
+};
+```
+
+`userId` must come from trusted authentication context.
+
+It must not be accepted from arbitrary user text.
+
+---
+
+# 22. Recommended Agent Workflow
+
+```text
+START
+  ↓
+Authenticate User
+  ↓
+Load User Context
+  ↓
+Understand Intent
+  ↓
+Collect Missing Information
+  ↓
+Search Doctors
+  ↓
+Check Availability
+  ↓
+Present Options
+  ↓
+User Selection
+  ↓
+Confirmation
+  ↓
+Validate Availability Again
+  ↓
+Book Appointment
+  ↓
+Create Notification
+  ↓
+Return Confirmation
+  ↓
+END
+```
+
+LangGraph is recommended for complex stateful workflows.
+
+Do not allow the LLM to freely execute arbitrary application operations.
+
+---
+
+# 23. Supabase Row Level Security
+
+RLS is mandatory.
+
+Enable RLS on all user-sensitive tables.
+
+Examples:
+
+```text
+profiles
+patient_profiles
+doctor_profiles
+appointments
+notifications
+doctor_availability
+```
+
+A patient should only access permitted records.
+
+Conceptually:
+
+```text
+auth.uid()
+   ↓
+profiles.id
+   ↓
+patient_profiles.user_id
+   ↓
+appointments.patient_id
+```
+
+A doctor should only manage their own availability and appointments.
+
+An ordinary user must not be able to query another user's private records.
+
+---
+
+# 24. Patient Authorization
+
+Patient permissions:
+
+```text
+✓ View own profile
+✓ Update permitted profile information
+✓ Search verified doctors
+✓ View public doctor profiles
+✓ View available slots
+✓ Book appointments
+✓ View own appointments
+✓ Cancel own appointments
+✓ Request rescheduling
+```
+
+Patient must NOT:
+
+```text
+✗ View another patient's records
+✗ Modify another patient's appointments
+✗ Modify doctor verification
+✗ Modify doctor availability
+✗ Access admin functions
+```
+
+---
+
+# 25. Doctor Authorization
+
+Doctor permissions:
+
+```text
+✓ View own profile
+✓ Update permitted profile fields
+✓ Manage own availability
+✓ View own appointments
+✓ Manage permitted appointment states
+✓ View information necessary for their appointments
+```
+
+Doctor must NOT:
+
+```text
+✗ Modify another doctor's profile
+✗ Modify another doctor's availability
+✗ Access unrelated patient information
+✗ Modify admin settings
+```
+
+---
+
+# 26. Admin Authorization
+
+Admin permissions may include:
+
+```text
+✓ Verify doctors
+✓ Reject doctor applications
+✓ Suspend doctors
+✓ Manage users
+✓ Review platform activity
+✓ Manage system configuration
+```
+
+Admin permissions must be enforced server-side.
+
+Never expose admin capability simply by hiding a frontend button.
+
+---
+
+# 27. Double Booking Prevention
+
+This is mandatory.
+
+The booking process must not rely on:
+
+```text
+check availability
+     ↓
+book later
+```
+
+without transactional protection.
+
+Correct:
+
+```text
+BEGIN TRANSACTION
+       ↓
+Validate slot
+       ↓
+Lock/check availability
+       ↓
+Create appointment
+       ↓
+COMMIT
+```
+
+The database must prevent two users from successfully booking the same slot.
+
+Use appropriate PostgreSQL constraints, transactions, locking, or an atomic booking function.
+
+The exact implementation should match the application's appointment model.
+
+---
+
+# 28. Supabase Database Functions
+
+For sensitive operations such as booking, consider using a PostgreSQL function/RPC.
+
+Conceptually:
+
+```text
+book_appointment(
+    doctor_id,
+    slot_id,
+    patient derived from auth.uid()
+)
+```
+
+The function should:
+
+```text
+1. Identify authenticated user
+2. Verify patient
+3. Verify doctor
+4. Verify doctor is verified
+5. Verify slot exists
+6. Verify slot is still available
+7. Prevent double booking
+8. Create appointment
+9. Return appointment
+```
+
+This prevents business-critical logic from depending entirely on the client.
+
+---
+
+# 29. Never Fake Successful Operations
+
+The AI must never say:
+
+```text
+"Your appointment has been booked."
+```
+
+unless the backend actually confirms:
+
+```text
+success = true
+appointment_id = real ID
+```
+
+If Supabase returns an error:
+
+```text
+SLOT_UNAVAILABLE
+```
+
+the AI must explain that the slot is no longer available.
+
+If booking fails:
+
+```text
+The appointment could not be booked.
+```
+
+Do not hallucinate success.
+
+---
+
+# 30. Appointment Confirmation
+
+Before important actions:
+
+```text
+AI:
+"I found Dr. Sharma at 3 PM tomorrow.
+Would you like me to book this appointment?"
+
+User:
+"Yes."
+
+AI
+ ↓
+book_appointment()
+```
+
+This confirmation is required for booking unless the product requirements explicitly define a different trusted flow.
+
+---
+
+# 31. Cancellation
+
+Cancellation must verify:
+
+```text
+appointment exists
+AND
+authenticated user owns appointment / is authorized
+AND
+appointment can still be cancelled
+```
+
+Patient A must never be able to cancel Patient B's appointment.
+
+---
+
+# 32. Rescheduling
+
+Use:
+
+```text
+Existing Appointment
+       ↓
+Request Reschedule
+       ↓
+Find New Availability
+       ↓
+User Selects Slot
+       ↓
+Confirm
+       ↓
+Validate Again
+       ↓
+Atomic Update
+```
+
+Do not blindly overwrite the appointment.
+
+---
+
+# 33. Real-Time Updates
+
+Where useful, use Supabase Realtime.
+
+Examples:
+
+```text
+Patient books appointment
+       ↓
+Doctor dashboard updates
+```
+
+```text
+Doctor confirms appointment
+       ↓
+Patient dashboard updates
+```
+
+```text
+Appointment cancelled
+       ↓
+Both relevant dashboards update
+```
+
+Realtime should never bypass authorization.
+
+---
+
+# 34. Notifications
+
+Create:
+
+```text
+notifications
+--------------------------------
+id
+user_id
+type
+title
+message
+appointment_id
+read
+created_at
+```
+
+Example events:
+
+```text
+APPOINTMENT_BOOKED
+APPOINTMENT_CONFIRMED
+APPOINTMENT_CANCELLED
+APPOINTMENT_RESCHEDULED
+DOCTOR_VERIFIED
+```
+
+Notifications must be created based on actual database events.
+
+Never tell the user a notification was sent unless the notification system confirms it.
+
+---
+
+# 35. Supabase Storage
+
+Use Supabase Storage for appropriate uploaded assets.
+
+Potential buckets:
+
+```text
+avatars
+doctor-documents
+medical-documents
+```
+
+Sensitive files must have appropriate private bucket policies.
+
+Do not make medical documents publicly accessible.
+
+Use signed URLs or authorized access where appropriate.
+
+Do not expose storage service credentials to the browser.
+
+---
+
+# 36. Medical Data Security
+
+The system may eventually handle highly sensitive medical information.
+
+Therefore:
+
+* Use HTTPS
+* Protect authentication sessions
+* Use RLS
+* Use least-privilege access
+* Protect private storage
+* Never expose service-role keys
+* Never log sensitive medical information unnecessarily
+* Avoid putting sensitive information into client-side analytics
+* Add audit logging
+* Restrict AI access to only necessary information
+* Encrypt sensitive data where appropriate
+* Follow applicable healthcare/privacy laws for the deployment jurisdiction
+
+The application must not assume that an LLM should have unrestricted access to a patient's medical history.
+
+---
+
+# 37. Audit Logging
+
+Create:
+
+```text
+audit_logs
+--------------------------------
+id
+user_id
+action
+resource_type
+resource_id
+metadata
+created_at
+```
+
+Examples:
+
+```text
+USER_LOGIN
+USER_LOGOUT
+APPOINTMENT_CREATED
+APPOINTMENT_CANCELLED
+APPOINTMENT_RESCHEDULED
+DOCTOR_VERIFIED
+DOCTOR_REJECTED
+PROFILE_UPDATED
+```
+
+Do not store unnecessary sensitive medical information in logs.
+
+---
+
+# 38. Real Dashboard
+
+After login:
+
+```text
+role = patient
+    ↓
+Patient Dashboard
+```
+
+```text
+role = doctor
+    ↓
+Doctor Dashboard
+```
+
+```text
+role = admin
+    ↓
+Admin Dashboard
+```
+
+Patient dashboard should display real Supabase data:
+
+```text
+Welcome, Asmit
+
+Upcoming Appointment
+
+Dr. Rahul Sharma
+Cardiologist
+August 16, 2026
+3:00 PM
+
+[View Appointment]
+
+AI Medical Assistant
+"What can I help you with?"
+```
+
+Doctor dashboard:
+
+```text
+Welcome, Dr. Rahul Sharma
+
+Today's Appointments
+
+10:00 AM — Patient
+11:30 AM — Patient
+3:00 PM — Patient
+
+[Manage Availability]
+```
+
+No hardcoded names.
+
+---
+
+# 39. Doctor Search
+
+Doctor search must query verified doctors.
+
+Conceptually:
+
+```sql
+SELECT
+    d.id,
+    p.full_name,
+    d.specialization,
+    d.bio,
+    d.experience_years
+FROM doctor_profiles d
+JOIN profiles p
+    ON p.id = d.user_id
+WHERE
+    p.role = 'doctor'
+    AND d.verification_status = 'verified';
+```
+
+The actual implementation should follow the project's existing Supabase schema.
+
+---
+
+# 40. Data Flow Example
+
+User:
+
+```text
+"I want to see a dermatologist tomorrow."
+```
+
+Flow:
+
+```text
+USER
+ ↓
+Frontend
+ ↓
+Authenticated Supabase Session
+ ↓
+AI Agent
+ ↓
+search_doctors()
+ ↓
+Supabase PostgreSQL
+ ↓
+Verified Doctors
+ ↓
+get_doctor_availability()
+ ↓
+Supabase PostgreSQL
+ ↓
+Available Slots
+ ↓
+AI
+ ↓
+User selects slot
+ ↓
+AI asks confirmation
+ ↓
+User confirms
+ ↓
+book_appointment()
+ ↓
+Backend / Supabase RPC
+ ↓
+Authorization
+ ↓
+Transaction
+ ↓
+appointments
+ ↓
+notification
+ ↓
+AI confirmation
+```
+
+---
+
+# 41. Example Tool Flow
+
+### Search
+
+```text
+search_doctors({
+    specialization: "dermatology"
+})
+```
+
+returns:
+
+```json
+{
+    "success": true,
+    "doctors": [
+        {
+            "id": "real-doctor-id",
+            "name": "Dr. Priya Rao",
+            "specialization": "Dermatology"
+        }
+    ]
+}
+```
+
+### Availability
+
+```text
+get_doctor_availability({
+    doctorId: "real-doctor-id",
+    date: "2026-08-16"
+})
+```
+
+returns:
+
+```json
+{
+    "success": true,
+    "slots": [
+        {
+            "id": "real-slot-id",
+            "start": "10:00",
+            "end": "10:30"
+        }
+    ]
+}
+```
+
+### Booking
+
+```text
+book_appointment({
+    doctorId: "real-doctor-id",
+    slotId: "real-slot-id"
+})
+```
+
+Backend derives:
+
+```text
+patient_id
+```
+
+from authenticated Supabase user.
+
+It returns:
+
+```json
+{
+    "success": true,
+    "appointmentId": "real-appointment-id",
+    "status": "confirmed"
+}
+```
+
+Only then should the AI confirm the appointment.
+
+---
+
+# 42. Environment Variables
+
+Use environment variables.
+
+Example:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+SUPABASE_SERVICE_ROLE_KEY=
+
+AI_API_KEY=
+```
+
+Never commit actual credentials.
+
+Add:
+
+```text
+.env
+.env.local
+```
+
+to `.gitignore` where appropriate.
+
+Provide:
+
+```text
+.env.example
+```
+
+with placeholders.
+
+---
+
+# 43. Database Migrations
+
+Do not manually modify production database structure without migration tracking.
+
+Maintain:
+
+```text
+supabase/
+    migrations/
+```
+
+Every schema change should be represented as a migration.
+
+Examples:
+
+```text
+001_create_profiles.sql
+002_create_patient_profiles.sql
+003_create_doctor_profiles.sql
+004_create_availability.sql
+005_create_appointments.sql
+006_create_notifications.sql
+007_create_rls_policies.sql
+008_create_booking_function.sql
+```
+
+Migration names may differ according to the project's existing structure.
+
+---
+
+# 44. Seed Data
+
+Development seed data may contain:
+
+```text
+development doctors
+development users
+development appointments
+```
+
+but clearly label them as development/test data.
+
+Production must not depend on fake seed doctors.
+
+Recommended:
+
+```text
+supabase/seed.sql
+```
+
+for local development only.
+
+---
+
+# 45. Existing Project Migration Strategy
+
+Do NOT immediately rewrite the entire application.
+
+First inspect:
+
+```text
+frontend
+backend
+AI agent
+database
+authentication
+API routes
+components
+mock data
+hardcoded users
+hardcoded doctors
+appointment logic
+environment variables
+```
+
+Then identify what is simulated.
+
+Replace components incrementally:
+
+```text
+Hardcoded Auth
+       ↓
+Supabase Auth
+
+Fake Users
+       ↓
+Supabase profiles
+
+Fake Doctors
+       ↓
+doctor_profiles
+
+Fake Availability
+       ↓
+doctor_availability
+
+Fake Appointments
+       ↓
+appointments
+
+Fake Agent Tools
+       ↓
+real Supabase-backed tools
+```
+
+Preserve the existing UI wherever possible.
+
+---
+
+# 46. Do Not Break Existing AI Features
+
+The AI agent already implemented in the project should remain functional.
+
+Do not remove:
+
+* Existing system prompts
+* Existing conversation UI
+* Existing RAG functionality
+* Existing knowledge base
+* Existing agent workflow
+
+unless required for the production migration.
+
+Instead, connect existing AI functionality to real tools and authenticated application state.
+
+---
+
+# 47. RAG vs Database
+
+Do NOT put transactional information into RAG.
+
+Use RAG for:
+
+```text
+Medical information
+Hospital policies
+Doctor information descriptions
+FAQ
+General healthcare knowledge
+Platform documentation
+```
+
+Use Supabase/PostgreSQL for:
+
+```text
+Users
+Doctors
+Availability
+Appointments
+Patient profiles
+Notifications
+Permissions
+Transactional state
+```
+
+Example:
+
+```text
+"What symptoms can indicate dehydration?"
+        ↓
+RAG / medical knowledge
+
+"Is Dr. Sharma available tomorrow?"
+        ↓
+Supabase
+
+"Book Dr. Sharma at 3 PM."
+        ↓
+Supabase + appointment tool
+```
+
+The AI must distinguish knowledge retrieval from transactional operations.
+
+---
+
+# 48. Security Boundary
+
+The final system should follow:
+
+```text
+                 ┌─────────────┐
+                 │     LLM     │
+                 └──────┬──────┘
+                        │
+                  Controlled Tools
+                        │
+                        ▼
+                 ┌─────────────┐
+                 │   Backend   │
+                 └──────┬──────┘
+                        │
+                Authentication
+                Authorization
+                Business Rules
+                        │
+                        ▼
+                 ┌─────────────┐
+                 │  Supabase   │
+                 │ PostgreSQL  │
+                 │     RLS     │
+                 └─────────────┘
+```
+
+Never:
+
+```text
+LLM
+ ↓
+Direct unrestricted database access
+```
+
+---
+
+# 49. Error Handling
+
+Every tool should return structured errors.
+
+Example:
+
+```json
+{
+    "success": false,
+    "error": "SLOT_UNAVAILABLE"
+}
+```
+
+Possible errors:
+
+```text
+UNAUTHENTICATED
+UNAUTHORIZED
+DOCTOR_NOT_FOUND
+DOCTOR_NOT_VERIFIED
+SLOT_NOT_FOUND
+SLOT_UNAVAILABLE
+APPOINTMENT_NOT_FOUND
+BOOKING_FAILED
+CANCELLATION_NOT_ALLOWED
+```
+
+The AI should convert these into natural language.
+
+Example:
+
+```text
+Backend:
+SLOT_UNAVAILABLE
+```
+
+AI:
+
+```text
+"That 3 PM slot was just taken. I can check the doctor's
+next available times for you."
+```
+
+---
+
+# 50. Testing
+
+Before deployment, test:
+
+## Authentication
+
+```text
+[ ] Sign up
+[ ] Login
+[ ] Logout
+[ ] Session persistence
+[ ] Session expiration
+[ ] Password reset
+[ ] Unauthorized route access
+```
+
+## Patient
+
+```text
+[ ] Patient profile creation
+[ ] Patient dashboard
+[ ] Doctor search
+[ ] Appointment booking
+[ ] Appointment viewing
+[ ] Appointment cancellation
+[ ] Appointment rescheduling
+```
+
+## Doctor
+
+```text
+[ ] Doctor registration
+[ ] Doctor verification
+[ ] Doctor dashboard
+[ ] Availability management
+[ ] Appointment management
+```
+
+## Authorization
+
+```text
+[ ] Patient cannot access another patient's data
+[ ] Patient cannot modify doctor data
+[ ] Doctor cannot access another doctor's private data
+[ ] Doctor cannot access unrelated patient data
+[ ] Non-admin cannot verify doctors
+[ ] Service-role key is never exposed
+```
+
+## AI
+
+```text
+[ ] Booking intent detection
+[ ] Missing information handling
+[ ] Real doctor search
+[ ] Real availability search
+[ ] Correct tool selection
+[ ] Confirmation before booking
+[ ] Correct appointment creation
+[ ] Correct error handling
+[ ] No hallucinated booking
+[ ] No invented doctor
+[ ] No invented appointment
+```
+
+## Concurrency
+
+```text
+[ ] Two users cannot book the same slot
+[ ] Booking remains atomic
+[ ] Cancel + book race conditions handled
+[ ] Rescheduling remains atomic
+```
+
+---
+
+# 51. Production Acceptance Checklist
+
+The project is considered successfully converted from simulation to a real-world application only when:
+
+```text
+[ ] Supabase project connected
+[ ] Supabase Auth implemented
+[ ] Login implemented
+[ ] Signup implemented
+[ ] Logout implemented correctly
+[ ] Session persistence implemented
+[ ] Protected routes implemented
+[ ] Profiles table implemented
+[ ] Patient profiles implemented
+[ ] Doctor profiles implemented
+[ ] Doctor verification implemented
+[ ] Doctor availability implemented
+[ ] Appointment table implemented
+[ ] Notifications implemented
+[ ] Audit logging implemented
+[ ] Supabase RLS enabled
+[ ] RLS policies tested
+[ ] Real doctor accounts supported
+[ ] Real patient accounts supported
+[ ] No production fake doctors
+[ ] No production fake patients
+[ ] No production bot identities
+[ ] No hardcoded appointment records
+[ ] Doctor data comes from Supabase
+[ ] Availability comes from Supabase
+[ ] Appointments persist in Supabase
+[ ] AI uses real tools
+[ ] AI cannot invent IDs
+[ ] Backend derives current user identity
+[ ] Service-role key protected
+[ ] Booking requires confirmation
+[ ] Booking is transactionally safe
+[ ] Double booking prevented
+[ ] Cancellation authorization implemented
+[ ] Rescheduling authorization implemented
+[ ] Notifications tied to real events
+[ ] AI cannot claim fake success
+[ ] RAG separated from transactional data
+[ ] Sensitive data protected
+[ ] Storage policies configured
+[ ] Database migrations created
+[ ] Environment variables configured
+[ ] Production tests completed
+```
+
+---
+
+# 52. Final Target
+
+The final application should behave like this:
+
+```text
+                     REAL USER
+                         │
+                         ▼
+                    SIGN UP / LOGIN
+                         │
+                         ▼
+                   SUPABASE AUTH
+                         │
+                         ▼
+                  AUTHENTICATED USER
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+           PATIENT     DOCTOR      ADMIN
+              │          │          │
+              └──────────┼──────────┘
+                         ▼
+                     DASHBOARD
+                         │
+                         ▼
+                    AI ASSISTANT
+                         │
+                         ▼
+                  TOOL CALLING
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+        Search Doctor  Availability  Booking
+              │          │          │
+              └──────────┼──────────┘
+                         ▼
+                    SUPABASE
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+           USERS      DOCTORS    APPOINTMENTS
+                         │
+                         ▼
+                    NOTIFICATIONS
+```
+
+The user should be able to say:
+
+```text
+"I need a cardiologist tomorrow."
+```
+
+and the system should:
+
+```text
+1. Identify the authenticated patient
+2. Understand the request
+3. Find REAL verified doctors
+4. Query REAL availability
+5. Present REAL time slots
+6. Ask for confirmation
+7. Validate the slot again
+8. Create a REAL Supabase appointment
+9. Associate the appointment with the REAL patient
+10. Associate it with the REAL doctor
+11. Notify the appropriate users
+12. Return the REAL appointment confirmation
+```
+
+The doctor should be able to log into a completely separate account and see that appointment.
+
+The patient should be able to log out.
+
+The doctor should be able to log out.
+
+When either logs back in, their data should still exist.
+
+There must be no concept of:
+
+```text
+"Bot Doctor"
+"Bot Patient"
+"Random User"
+"Fake Appointment"
+"AI-created doctor"
+```
+
+in the production application.
+
+---
+
+# 53. Definition of Done
+
+The application is complete when it has transitioned from:
+
+```text
+                  DEMO
+
+User
+ ↓
+AI
+ ↓
+Fake Doctor
+ ↓
+Fake Appointment
+```
+
+to:
+
+```text
+                REAL SYSTEM
+
+Real Patient
+      │
+      ▼
+Supabase Auth
+      │
+      ▼
+AI Agent
+      │
+      ▼
+Authenticated Tool
+      │
+      ▼
+Backend Business Logic
+      │
+      ▼
+Supabase PostgreSQL + RLS
+      │
+      ├── Real Patient
+      ├── Real Doctor
+      ├── Real Availability
+      └── Real Appointment
+              │
+              ▼
+        Real Notification
+```
+
+The AI is the **intelligent interface and orchestrator**.
+
+Supabase is the **identity, persistence, authorization, and data layer**.
+
+The backend is the **business-rule and security boundary**.
+
+The frontend is the **user experience**.
+
+The database contains the **real-world source of truth**.
+
+That is the required architecture for this project to be considered a **real-world AI medical assistant rather than a bot simulation**.

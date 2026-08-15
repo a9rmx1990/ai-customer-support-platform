@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, MessageSquare, Ticket, Database, Layers, Stethoscope, LogIn, LogOut, User, Activity, Menu, X } from 'lucide-react';
+import { Bot, MessageSquare, Ticket, Database, Layers, Stethoscope, LogIn, LogOut, Activity, Menu, X, Users } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function Navbar() {
@@ -14,10 +14,15 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home', icon: Bot },
     { href: '/chat?domain=medical', label: 'Support Chat', icon: MessageSquare },
-    { href: '/tickets', label: 'Tickets Dashboard', icon: Ticket },
-    { href: '/knowledge', label: 'Vector Store', icon: Database },
-    { href: '/architecture', label: 'System Architecture', icon: Layers },
+    { href: '/doctors', label: 'Doctors', icon: Users },
+    { href: '/tickets', label: 'Tickets', icon: Ticket },
+    { href: '/knowledge', label: 'Knowledge', icon: Database },
+    { href: '/architecture', label: 'Architecture', icon: Layers },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
     <header className="sticky top-0 z-50 surface-overlay border-b border-triage-border backdrop-blur-xl">
@@ -72,18 +77,18 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 bg-surface-base px-3 py-1.5 rounded-xl border border-triage-border">
                 <div className="w-6 h-6 rounded bg-surface-overlay border border-triage-border text-clinical-mint text-xs font-mono font-bold flex items-center justify-center">
-                  {user.name.charAt(0)}
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col">
                   <span className="text-xs font-semibold text-white line-clamp-1">{user.name}</span>
                   <span className="text-[9px] font-mono text-clinical-mint uppercase tracking-wider font-semibold">
-                    {user.role} ({user.id})
+                    {user.role}
                   </span>
                 </div>
               </div>
 
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 title="Sign Out"
                 className="p-1.5 rounded-lg bg-surface-base hover:bg-rose-950/40 text-gray-400 hover:text-rose-300 border border-triage-border hover:border-rose-500/30 transition-colors text-xs flex items-center gap-1.5"
               >
