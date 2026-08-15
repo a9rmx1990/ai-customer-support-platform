@@ -98,6 +98,12 @@ function getSyncClient(): any {
 // Exported supabase client proxy
 // Behaves like the real Supabase client but falls back to no-ops gracefully.
 // ---------------------------------------------------------------------------
+const noopChannel = {
+  on: () => noopChannel,
+  subscribe: () => noopChannel,
+  unsubscribe: () => {},
+};
+
 export const supabase: any = {
   get auth() {
     const client = getSyncClient();
@@ -112,6 +118,21 @@ export const supabase: any = {
     const client = getSyncClient();
     if (!client) return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } });
     return client.rpc(fn, args);
+  },
+  channel(name: string, opts?: any) {
+    const client = getSyncClient();
+    if (!client) return noopChannel;
+    return client.channel(name, opts);
+  },
+  removeChannel(channel: any) {
+    const client = getSyncClient();
+    if (!client) return;
+    return client.removeChannel(channel);
+  },
+  removeAllChannels() {
+    const client = getSyncClient();
+    if (!client) return;
+    return client.removeAllChannels();
   },
   storage: {
     from: () => ({ upload: async () => ({ error: null }) }),
