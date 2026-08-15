@@ -6,8 +6,9 @@
 --   Supabase Dashboard → SQL Editor → paste and run
 -- Or via the Supabase CLI: supabase db push
 
--- Enable UUID generation
+-- Enable UUID generation and btree_gist for exclusion constraints
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "btree_gist";
 
 -- =============================================================================
 -- PROFILES TABLE
