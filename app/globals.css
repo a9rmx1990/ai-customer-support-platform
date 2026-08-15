@@ -3,79 +3,98 @@
 @tailwind utilities;
 
 :root {
-  --font-inter: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-jakarta: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-inter: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-jetbrains: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --ink: #07090e;
+  --surface-base: #0c101a;
+  --surface-elevated: #121827;
+  --surface-overlay: #192237;
+  --triage-border: rgba(255, 255, 255, 0.07);
+  --triage-border-active: rgba(0, 214, 150, 0.35);
+  --clinical-mint: #00d696;
+  --clinical-cyan: #00a8cc;
+  --signal-amber: #e69900;
+  --signal-violet: #7c5cff;
 }
 
-body {
-  font-family: var(--font-inter);
-  background-color: #0b0f19;
-  color: #f3f4f6;
-  min-height: 100vh;
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    font-family: var(--font-jakarta);
+    letter-spacing: -0.02em;
+  }
+  p, li {
+    text-wrap: pretty;
+  }
+  body {
+    font-family: var(--font-inter);
+    background-color: var(--ink);
+    color: #e5e7eb;
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(at 50% 0%, rgba(0, 214, 150, 0.04) 0px, transparent 50%),
+      radial-gradient(at 90% 10%, rgba(124, 92, 255, 0.04) 0px, transparent 40%);
+    background-attachment: fixed;
+  }
 }
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: var(--ink);
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--surface-overlay);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4f69f6;
+  background: var(--clinical-mint);
 }
 
-/* Custom Animations & Styling Utilities */
-.glass-panel {
-  background: rgba(17, 24, 39, 0.75);
+/* Craft Depth Layers & Surfaces (Whisper-Quiet Elevation) */
+.surface-base {
+  background: var(--surface-base);
+  border: 1px solid var(--triage-border);
+}
+
+.surface-elevated {
+  background: var(--surface-elevated);
+  border: 1px solid var(--triage-border);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.surface-elevated:hover {
+  border-color: var(--triage-border-active);
+}
+
+.surface-overlay {
+  background: rgba(18, 24, 39, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--triage-border);
 }
 
-.glass-card {
-  background: rgba(31, 41, 55, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.2s ease-in-out;
-}
-.glass-card:hover {
-  border-color: rgba(79, 105, 246, 0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(79, 105, 246, 0.15);
+/* Domain Accent Badges */
+.badge-mint {
+  background: rgba(0, 214, 150, 0.12);
+  color: var(--clinical-mint);
+  border: 1px solid rgba(0, 214, 150, 0.25);
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #818cf8 50%, #c084fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.badge-amber {
+  background: rgba(230, 153, 0, 0.12);
+  color: var(--signal-amber);
+  border: 1px solid rgba(230, 153, 0, 0.25);
 }
 
-.gradient-border {
-  position: relative;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(79, 105, 246, 0.3), rgba(168, 85, 247, 0.3));
-  padding: 1px;
+.badge-violet {
+  background: rgba(124, 92, 255, 0.12);
+  color: var(--signal-violet);
+  border: 1px solid rgba(124, 92, 255, 0.25);
 }
 
-.gradient-button {
-  background: linear-gradient(135deg, #4f69f6 0%, #7c3aed 100%);
-  transition: all 0.2s ease;
-}
-.gradient-button:hover {
-  opacity: 0.92;
-  box-shadow: 0 0 20px rgba(79, 105, 246, 0.4);
-}
 
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
