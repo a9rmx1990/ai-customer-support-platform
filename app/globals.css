@@ -96,5 +96,24 @@
   border: 1px solid rgba(124, 92, 255, 0.25);
 }
 
+/* Interactive Elements & Buttons Clickability Guarantee */
+button,
+a,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: 0.55;
+}
+
+
 
 
