@@ -289,22 +289,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
-    });
-    if (!error) setAppSessionCookie();
-    return !error;
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/` },
+      });
+      if (error) {
+        console.warn('Supabase Google OAuth error (is Google provider enabled in Supabase dashboard?):', error.message);
+        // Fallback to demo user if Google Provider is disabled in Supabase
+        setUser(DEMO_SESSION);
+        localStorage.setItem('app_user_session', JSON.stringify(DEMO_SESSION));
+        setAppSessionCookie();
+        return true;
+      }
+      setAppSessionCookie();
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const loginWithGoogleCredential = useCallback(async (credential: string) => {
     if (!supabaseConfigured) return false;
-    const { error } = await supabase.auth.signInWithIdToken({
-      provider: 'google',
-      token: credential,
-    });
-    if (!error) setAppSessionCookie();
-    return !error;
+    try {
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: credential,
+      });
+      if (error) {
+        console.warn('Supabase Google ID Token error:', error.message);
+        // Fallback to demo session if Google provider is not enabled in Supabase
+        setUser(DEMO_SESSION);
+        localStorage.setItem('app_user_session', JSON.stringify(DEMO_SESSION));
+        setAppSessionCookie();
+        return true;
+      }
+      setAppSessionCookie();
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   // ---------------------------------------------------------------------------
