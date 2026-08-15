@@ -92,16 +92,12 @@ function LiveDoctorChatWorkspace() {
       }
     });
 
-    // If patient, fetch doctor list for starting new chats
-    if (currentUserRole === 'patient') {
-      fetch('/api/doctors')
-        .then((r) => r.json())
-        .then((d) => setDoctors(d.doctors ?? []))
-        .catch(() => setDoctors([]))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // Fetch doctor/consultant list for starting new chats
+    fetch('/api/doctors')
+      .then((r) => r.json())
+      .then((d) => setDoctors(d.doctors ?? []))
+      .catch(() => setDoctors([]))
+      .finally(() => setLoading(false));
   }, [currentUserId, currentUserRole]);
 
   // When selected conversation changes, fetch history & subscribe to Realtime
@@ -137,23 +133,24 @@ function LiveDoctorChatWorkspace() {
 
   // Start or open conversation with a specific doctor
   const handleSelectDoctor = async (doc: DoctorProfile) => {
-    // If patient user, get or create conversation
+    // Ensure we use the doctor's user ID (profiles.id) rather than the doctor record ID
     const patientId = currentUserId;
+    const doctorUserId = doc.userId || doc.id;
 
     const res = await getOrCreateConversation({
       patientId,
-      doctorId: doc.id,
+      doctorId: doctorUserId,
     });
 
     if (res.success && res.conversationId) {
       const newConv: ConversationItem = {
         id: res.conversationId,
         patientId,
-        doctorId: doc.id,
+        doctorId: doctorUserId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         otherUser: {
-          id: doc.id,
+          id: doctorUserId,
           fullName: doc.name,
           role: 'doctor',
           specialization: doc.specialization,
@@ -247,10 +244,10 @@ function LiveDoctorChatWorkspace() {
             </div>
           )}
 
-          {/* If Patient role: Show Doctor Directory to start new conversation */}
-          {currentUserRole === 'patient' && doctors.length > 0 && (
+          {/* Contact Directory to start or open a conversation */}
+          {doctors.length > 0 && (
             <div className="pt-3 space-y-1.5 border-t border-triage-border mt-3">
-              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider px-2">Verified Clinic Doctors</p>
+              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider px-2">Verified Clinic Contacts</p>
               {doctors.map((doc) => (
                 <button
                   key={doc.id}

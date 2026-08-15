@@ -55,6 +55,19 @@ export async function fetchUserConversations(currentUserId: string): Promise<{
   }
 
   try {
+    // Check if currentUserId maps to a doctor_profile id as well
+    const { data: docProf } = await supabase
+      .from('doctor_profiles')
+      .select('id')
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+
+    const docProfId = docProf?.id;
+
+    const orCondition = docProfId
+      ? `patient_id.eq.${currentUserId},doctor_id.eq.${currentUserId},doctor_id.eq.${docProfId}`
+      : `patient_id.eq.${currentUserId},doctor_id.eq.${currentUserId}`;
+
     const { data: convs, error } = await supabase
       .from('conversations')
       .select(`
@@ -62,7 +75,7 @@ export async function fetchUserConversations(currentUserId: string): Promise<{
         patient_profile:profiles!patient_id (id, full_name, role, avatar_url),
         doctor_profile:profiles!doctor_id (id, full_name, role, avatar_url)
       `)
-      .or(`patient_id.eq.${currentUserId},doctor_id.eq.${currentUserId}`)
+      .or(orCondition)
       .order('updated_at', { ascending: false });
 
     if (error) return { success: false, conversations: [], error: error.message };
