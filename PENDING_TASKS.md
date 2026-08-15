@@ -14,15 +14,10 @@ This document outlines the remaining roadmap required to bring the **Multi-Domai
 
 ---
 
-## ⏳ Phase 2: Secondary Pages Craft Refactoring (PENDING)
-- [ ] **Chat Workspace (`app/chat/page.tsx`)**:
-  - Replace legacy `bg-gray-900`, `border-gray-800`, and `gradient-button` classes with `--surface-base`, `--surface-elevated`, and `--triage-border`.
-  - Standardize domain switcher pills and patient profile selection cards.
-- [ ] **Support Ticket Dashboard (`app/tickets/page.tsx`)**:
-  - Refactor metric counter cards and ticket list items to use whisper-quiet 1px surface borders.
-  - Update ticket creation modal with surface overlays.
-- [ ] **RAG Knowledge Base (`app/knowledge/page.tsx`)**:
-  - Refactor document search cards and domain collection filters using domain tokens.
+## ⏳ Phase 2: Secondary Pages Craft Refactoring (IN PROGRESS)
+- [x] **Chat Workspace (`app/chat/page.tsx`)** (COMPLETED)
+- [x] **Support Ticket Dashboard (`app/tickets/page.tsx`)** (COMPLETED)
+- [x] **RAG Knowledge Base (`app/knowledge/page.tsx`)** (COMPLETED + PDF Upload)
 - [ ] **System Architecture Diagram (`app/architecture/page.tsx`)**:
   - Rebuild node flow diagrams and tool execution pipeline views using quiet dark surface cards.
 - [ ] **Patient/Customer Sign Up (`app/signup/page.tsx`)**:
@@ -30,7 +25,7 @@ This document outlines the remaining roadmap required to bring the **Multi-Domai
 
 ---
 
-## 🧹 Phase 3: Garbage Cleanup & Code Sanitation (IN PROGRESS)
+## 🧹 Phase 3: Garbage Cleanup & Code Sanitation (PENDING)
 - [x] Remove `.next` cache artifacts.
 - [ ] Audit for unused CSS rules and dead code blocks.
 - [ ] Verify zero console warnings during production build.
