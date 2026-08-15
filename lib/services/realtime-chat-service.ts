@@ -41,6 +41,46 @@ export interface RealtimeChatMessage {
   isSelf: boolean;
 }
 
+export interface PatientProfileItem {
+  id: string;
+  fullName: string;
+  role: 'patient';
+  avatarUrl: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// fetchPatientProfiles
+// Returns all registered patient profiles for doctor initiation
+// ---------------------------------------------------------------------------
+export async function fetchPatientProfiles(): Promise<{
+  success: boolean;
+  patients: PatientProfileItem[];
+}> {
+  if (!supabaseConfigured) {
+    return { success: true, patients: [] };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, avatar_url')
+      .eq('role', 'patient');
+
+    if (error) return { success: false, patients: [] };
+
+    const patients: PatientProfileItem[] = (data ?? []).map((p: any) => ({
+      id: p.id,
+      fullName: p.full_name || 'Patient Account',
+      role: 'patient',
+      avatarUrl: p.avatar_url ?? null,
+    }));
+
+    return { success: true, patients };
+  } catch {
+    return { success: false, patients: [] };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // fetchUserConversations
 // Returns all active conversations for the authenticated user (Patient or Doctor)

@@ -47,8 +47,10 @@ import {
   fetchConversationMessages,
   sendRealtimeMessage,
   subscribeToConversationMessages,
+  fetchPatientProfiles,
   ConversationItem,
   RealtimeChatMessage,
+  PatientProfileItem,
 } from '@/lib/services/realtime-chat-service';
 import type { DoctorProfile } from '@/lib/services/doctor-service';
 
@@ -61,6 +63,7 @@ function LiveDoctorChatWorkspace() {
 
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
+  const [patients, setPatients] = useState<PatientProfileItem[]>([]);
   const [selectedConv, setSelectedConv] = useState<ConversationItem | null>(null);
   const [messages, setMessages] = useState<RealtimeChatMessage[]>([]);
   const [inputContent, setInputContent] = useState('');
@@ -78,7 +81,7 @@ function LiveDoctorChatWorkspace() {
     scrollToBottom();
   }, [messages]);
 
-  // Load user conversations and verified doctor list
+  // Load user conversations and role-aware contact directory list
   useEffect(() => {
     setLoading(true);
 
@@ -92,12 +95,20 @@ function LiveDoctorChatWorkspace() {
       }
     });
 
-    // Fetch doctor/consultant list for starting new chats
-    fetch('/api/doctors')
-      .then((r) => r.json())
-      .then((d) => setDoctors(d.doctors ?? []))
-      .catch(() => setDoctors([]))
-      .finally(() => setLoading(false));
+    // Role-based directory fetching:
+    // Doctors see Registered Patients; Patients see Clinic Doctors
+    if (currentUserRole === 'doctor') {
+      fetchPatientProfiles().then((res) => {
+        setPatients(res.patients);
+        setLoading(false);
+      });
+    } else {
+      fetch('/api/doctors')
+        .then((r) => r.json())
+        .then((d) => setDoctors(d.doctors ?? []))
+        .catch(() => setDoctors([]))
+        .finally(() => setLoading(false));
+    }
   }, [currentUserId, currentUserRole]);
 
   // When selected conversation changes, fetch history & subscribe to Realtime
@@ -154,6 +165,36 @@ function LiveDoctorChatWorkspace() {
           fullName: doc.name,
           role: 'doctor',
           specialization: doc.specialization,
+        },
+      };
+
+      setConversations((prev) => {
+        const exists = prev.find((c) => c.id === res.conversationId);
+        return exists ? prev : [newConv, ...prev];
+      });
+      setSelectedConv(newConv);
+    }
+  };
+
+  // Start or open conversation with a specific patient (Doctor flow)
+  const handleSelectPatient = async (patient: PatientProfileItem) => {
+    const res = await getOrCreateConversation({
+      patientId: patient.id,
+      doctorId: currentUserId,
+    });
+
+    if (res.success && res.conversationId) {
+      const newConv: ConversationItem = {
+        id: res.conversationId,
+        patientId: patient.id,
+        doctorId: currentUserId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        otherUser: {
+          id: patient.id,
+          fullName: patient.fullName,
+          role: 'patient',
+          specialization: null,
         },
       };
 
@@ -244,10 +285,37 @@ function LiveDoctorChatWorkspace() {
             </div>
           )}
 
-          {/* Contact Directory to start or open a conversation */}
-          {doctors.length > 0 && (
+          {/* Patient Directory for Doctors */}
+          {currentUserRole === 'doctor' && patients.length > 0 && (
             <div className="pt-3 space-y-1.5 border-t border-triage-border mt-3">
-              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider px-2">Verified Clinic Contacts</p>
+              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider px-2">Registered Clinic Patients</p>
+              {patients.map((pat) => (
+                <button
+                  key={pat.id}
+                  onClick={() => handleSelectPatient(pat)}
+                  className="w-full p-2.5 rounded-xl text-left bg-surface-base/40 hover:bg-surface-base border border-triage-border hover:border-clinical-mint/40 transition-all flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded bg-surface-elevated border border-triage-border text-clinical-mint font-bold text-xs flex items-center justify-center">
+                      👤
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-200">{pat.fullName}</p>
+                      <p className="text-[9px] font-mono text-clinical-mint">Patient Account</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-clinical-mint bg-clinical-mint/10 px-2 py-0.5 rounded border border-clinical-mint/30">
+                    Chat
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Doctor Directory for Patients */}
+          {currentUserRole === 'patient' && doctors.length > 0 && (
+            <div className="pt-3 space-y-1.5 border-t border-triage-border mt-3">
+              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wider px-2">Verified Clinic Doctors</p>
               {doctors.map((doc) => (
                 <button
                   key={doc.id}
