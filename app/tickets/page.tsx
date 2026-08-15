@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Ticket, Plus, Filter, CheckCircle2, AlertTriangle, Clock, RefreshCw, User, MessageSquare } from 'lucide-react';
+import { Ticket, Plus, Filter, CheckCircle2, AlertTriangle, Clock, RefreshCw, User, X } from 'lucide-react';
 import { SupportTicket } from '@/lib/mock-data';
 
 export default function TicketsPage() {
@@ -63,72 +63,77 @@ export default function TicketsPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-            <Ticket className="w-8 h-8 text-brand-400" />
-            Support Ticket Dashboard
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Real-time human escalation queue created by the n8n AI Support Agent.
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-triage-border">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-surface-elevated border border-triage-border-active flex items-center justify-center text-clinical-mint">
+            <Ticket className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-display font-bold text-white tracking-tight flex items-center gap-2">
+              Escalation Queue & Support Tickets
+            </h1>
+            <p className="text-xs text-gray-400 font-body">
+              Real-time human escalation queue created by n8n AI tool triage & fallback workflows.
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={fetchTickets}
-            className="p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg bg-surface-elevated border border-triage-border text-gray-300 hover:text-white hover:border-triage-border-active transition-colors"
+            title="Refresh tickets"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="gradient-button text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-md"
+            className="px-3.5 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs flex items-center gap-1.5 transition-colors"
           >
-            <Plus className="w-4 h-4" />
-            <span>New Ticket</span>
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Create Ticket</span>
           </button>
         </div>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass-panel p-5 rounded-2xl">
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Tickets</p>
-          <p className="text-3xl font-extrabold text-white mt-1">{tickets.length}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+        <div className="surface-elevated p-4 rounded-xl border border-triage-border space-y-1">
+          <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-gray-400">Total Tickets</p>
+          <p className="text-2xl font-mono font-bold text-white">{tickets.length}</p>
         </div>
-        <div className="glass-panel p-5 rounded-2xl">
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Open Queue</p>
-          <p className="text-3xl font-extrabold text-amber-400 mt-1">
+        <div className="surface-elevated p-4 rounded-xl border border-triage-border space-y-1">
+          <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-gray-400">Open Queue</p>
+          <p className="text-2xl font-mono font-bold text-signal-amber">
             {tickets.filter((t) => t.status === 'open' || t.status === 'in_progress').length}
           </p>
         </div>
-        <div className="glass-panel p-5 rounded-2xl">
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">High / Urgent</p>
-          <p className="text-3xl font-extrabold text-rose-400 mt-1">
+        <div className="surface-elevated p-4 rounded-xl border border-triage-border space-y-1">
+          <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-gray-400">High / Urgent</p>
+          <p className="text-2xl font-mono font-bold text-rose-400">
             {tickets.filter((t) => t.priority === 'high' || t.priority === 'urgent').length}
           </p>
         </div>
-        <div className="glass-panel p-5 rounded-2xl">
-          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Escalation Rate</p>
-          <p className="text-3xl font-extrabold text-emerald-400 mt-1">4.2%</p>
+        <div className="surface-elevated p-4 rounded-xl border border-triage-border space-y-1">
+          <p className="text-[10px] font-mono font-semibold uppercase tracking-wider text-gray-400">Escalation Rate</p>
+          <p className="text-2xl font-mono font-bold text-clinical-mint">4.2%</p>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs border-b border-gray-800">
-        <Filter className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs border-b border-triage-border font-mono scrollbar-none">
+        <Filter className="w-3.5 h-3.5 text-gray-500 mr-1 shrink-0" />
         {['all', 'open', 'in_progress', 'resolved', 'closed'].map((st) => (
           <button
             key={st}
             onClick={() => setStatusFilter(st)}
-            className={`px-3.5 py-1.5 rounded-lg font-semibold capitalize transition-all ${
+            className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
               statusFilter === st
-                ? 'bg-brand-600/30 text-brand-300 border border-brand-500/40'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
+                ? 'bg-surface-elevated text-clinical-mint border border-triage-border-active font-semibold'
+                : 'text-gray-400 hover:text-white hover:bg-surface-elevated border border-transparent'
             }`}
           >
             {st.replace('_', ' ')}
@@ -136,66 +141,69 @@ export default function TicketsPage() {
         ))}
       </div>
 
-      {/* Tickets Table / List */}
-      <div className="glass-panel rounded-2xl overflow-hidden border border-gray-800">
+      {/* Tickets List */}
+      <div className="surface-elevated rounded-2xl overflow-hidden border border-triage-border">
         {loading ? (
-          <div className="p-12 text-center text-gray-400 italic flex items-center justify-center gap-2">
-            <RefreshCw className="w-5 h-5 animate-spin text-brand-400" />
+          <div className="p-12 text-center text-gray-400 italic flex items-center justify-center gap-2 font-mono text-xs">
+            <RefreshCw className="w-4 h-4 animate-spin text-clinical-mint" />
             <span>Loading support tickets from database...</span>
           </div>
         ) : filteredTickets.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <Ticket className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-            <p className="font-semibold text-white">No tickets found</p>
-            <p className="text-xs text-gray-500 mt-1">No tickets match the selected filter criteria.</p>
+          <div className="p-12 text-center text-gray-400 space-y-2">
+            <Ticket className="w-8 h-8 text-gray-600 mx-auto" />
+            <p className="font-semibold text-white text-xs">No tickets match criteria</p>
+            <p className="text-[11px] text-gray-500 font-mono">Select another status filter or log a new ticket.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-triage-border">
             {filteredTickets.map((t) => (
-              <div key={t.ticket_id} className="p-5 hover:bg-gray-900/50 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div
+                key={t.ticket_id}
+                className="p-4 hover:bg-surface-overlay transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              >
                 <div className="space-y-1.5 max-w-2xl">
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-white text-base">#{t.ticket_id}</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-mono font-bold text-xs text-white">#{t.ticket_id}</span>
                     <span
-                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold uppercase ${
                         t.priority === 'urgent'
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
                           : t.priority === 'high'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          ? 'bg-signal-amber/10 text-signal-amber border border-signal-amber/30'
+                          : 'bg-surface-base text-gray-400 border border-triage-border'
                       }`}
                     >
                       {t.priority}
                     </span>
                     <span
-                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold uppercase ${
                         t.status === 'open'
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          ? 'bg-clinical-mint/10 text-clinical-mint border border-clinical-mint/20'
                           : t.status === 'in_progress'
-                          ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                          : 'bg-gray-800 text-gray-400'
+                          ? 'bg-signal-violet/10 text-signal-violet border border-signal-violet/20'
+                          : 'bg-surface-base text-gray-500 border border-triage-border'
                       }`}
                     >
                       {t.status.replace('_', ' ')}
                     </span>
                   </div>
 
-                  <p className="font-semibold text-sm text-gray-100">{t.issue}</p>
+                  <p className="font-medium text-xs text-gray-100 font-body">{t.issue}</p>
                   {t.reason && (
-                    <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <p className="text-[11px] text-gray-400 flex items-center gap-1.5 font-mono">
+                      <AlertTriangle className="w-3 h-3 text-signal-amber shrink-0" />
                       <span>Reason: {t.reason}</span>
                     </p>
                   )}
                 </div>
 
-                <div className="text-right text-xs text-gray-400 space-y-1 shrink-0">
+                <div className="text-right text-xs text-gray-400 space-y-1 shrink-0 font-mono">
                   <p className="font-medium text-gray-300 flex items-center gap-1 sm:justify-end">
-                    <User className="w-3.5 h-3.5 text-brand-400" />
-                    <span>Customer: {t.customer_id}</span>
+                    <User className="w-3.5 h-3.5 text-clinical-mint" />
+                    <span>{t.customer_id}</span>
                   </p>
-                  <p className="text-[11px] text-gray-500 flex items-center gap-1 sm:justify-end">
-                    <Clock className="w-3.5 h-3.5" />
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1 sm:justify-end">
+                    <Clock className="w-3 h-3" />
                     <span>{new Date(t.created_at).toLocaleString()}</span>
                   </p>
                 </div>
@@ -207,32 +215,44 @@ export default function TicketsPage() {
 
       {/* CREATE TICKET MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-md p-6 rounded-2xl border border-gray-700 shadow-2xl space-y-4">
-            <h3 className="font-bold text-lg text-white">Create Support Ticket</h3>
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="surface-overlay w-full max-w-md p-6 rounded-2xl border border-triage-border shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-triage-border">
+              <h3 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-clinical-mint" />
+                <span>Create Support Ticket</span>
+              </h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 text-gray-400 hover:text-white hover:bg-surface-base rounded-md transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            <form onSubmit={handleCreateTicket} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-gray-300 font-semibold mb-1">Customer Account</label>
+            <form onSubmit={handleCreateTicket} className="space-y-3.5 text-xs font-body">
+              <div className="space-y-1">
+                <label className="block text-gray-300 font-medium font-mono text-[11px]">Customer / Patient ID</label>
                 <select
                   value={newCustId}
                   onChange={(e) => setNewCustId(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 text-gray-100 p-2.5 rounded-xl"
+                  className="w-full bg-surface-base text-gray-100 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-mono"
                 >
                   <option value="CUST-1001">CUST-1001 - Ada Lovelace</option>
                   <option value="CUST-1002">CUST-1002 - Alan Turing</option>
                   <option value="CUST-1003">CUST-1003 - Grace Hopper</option>
                   <option value="CUST-1004">CUST-1004 - Claude Shannon</option>
                   <option value="CUST-1005">CUST-1005 - Margaret Hamilton</option>
+                  <option value="PAT-2001">PAT-2001 - Ada Lovelace (Patient)</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-gray-300 font-semibold mb-1">Priority</label>
+              <div className="space-y-1">
+                <label className="block text-gray-300 font-medium font-mono text-[11px]">Priority Level</label>
                 <select
                   value={newPriority}
                   onChange={(e) => setNewPriority(e.target.value as any)}
-                  className="w-full bg-gray-900 border border-gray-800 text-gray-100 p-2.5 rounded-xl"
+                  className="w-full bg-surface-base text-gray-100 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-mono"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -241,29 +261,29 @@ export default function TicketsPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-gray-300 font-semibold mb-1">Issue Description</label>
+              <div className="space-y-1">
+                <label className="block text-gray-300 font-medium font-mono text-[11px]">Issue Description</label>
                 <textarea
                   rows={3}
                   value={newIssue}
                   onChange={(e) => setNewIssue(e.target.value)}
-                  placeholder="Describe customer issue..."
-                  className="w-full bg-gray-900 border border-gray-800 text-gray-100 p-2.5 rounded-xl focus:border-brand-500 focus:outline-none"
+                  placeholder="Describe customer issue or escalation reason..."
+                  className="w-full bg-surface-base text-gray-100 text-xs p-3 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:text-white"
+                  className="px-3.5 py-2 rounded-lg bg-surface-base text-gray-400 hover:text-white border border-triage-border text-xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="gradient-button text-white px-5 py-2 rounded-xl font-semibold"
+                  className="px-4 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs transition-colors"
                 >
                   Save Ticket
                 </button>
@@ -275,3 +295,4 @@ export default function TicketsPage() {
     </div>
   );
 }
+
