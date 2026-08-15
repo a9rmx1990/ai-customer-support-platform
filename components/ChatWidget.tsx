@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User, RefreshCw, AlertCircle, Ticket, ChevronRight } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, RefreshCw, AlertCircle, Ticket, ChevronRight, Sparkles, Activity } from 'lucide-react';
 import { Message } from '@/lib/mock-data';
 
 export default function ChatWidget() {
@@ -14,7 +14,7 @@ export default function ChatWidget() {
       id: 'welcome-1',
       conversation_id: 'conv-init',
       role: 'assistant',
-      content: 'Hello! I am your AI Customer Support Assistant. How can I help you today?',
+      content: 'Hello! I am your Multi-Domain AI Assistant. How can I help you today?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       intent: 'Greeting',
     },
@@ -96,71 +96,67 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="gradient-button p-4 rounded-full text-white shadow-2xl flex items-center gap-3 hover:scale-105 transition-transform group"
+          className="bg-clinical-mint hover:bg-emerald-400 p-3.5 rounded-xl text-ink shadow-lg flex items-center gap-2.5 transition-colors font-bold text-xs"
           aria-label="Open AI Support Chat"
         >
-          <div className="relative">
-            <Bot className="w-7 h-7" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-gray-900 animate-ping" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-gray-900" />
-          </div>
-          <span className="font-semibold text-sm pr-1">Need Help? Chat AI</span>
+          <Bot className="w-5 h-5 stroke-[2]" />
+          <span className="font-display">Need Help? Chat AI</span>
         </button>
       )}
 
       {/* Floating Chat Window */}
       {isOpen && (
-        <div className="w-[380px] sm:w-[420px] h-[580px] glass-panel rounded-2xl border border-gray-700/80 shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="w-[380px] sm:w-[420px] h-[560px] surface-overlay rounded-2xl border border-triage-border flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-200">
           {/* Header */}
-          <div className="px-4 py-3.5 bg-gradient-to-r from-gray-900 via-brand-950 to-gray-900 border-b border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-md">
-                <Bot className="w-5 h-5" />
+          <div className="px-4 py-3 bg-surface-base border-b border-triage-border flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-surface-elevated border border-triage-border-active flex items-center justify-center text-clinical-mint font-bold">
+                <Bot className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
+                <h3 className="font-display font-bold text-xs text-white flex items-center gap-1.5">
                   AutoSupport Assistant
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-clinical-mint" />
                 </h3>
-                <p className="text-[11px] text-gray-400">n8n Agent • RAG Grounded</p>
+                <p className="text-[10px] font-mono text-gray-400">n8n Agent • RAG Grounded</p>
               </div>
             </div>
 
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1 text-gray-400 hover:text-white hover:bg-surface-elevated rounded-lg transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Quick Prompts Bar */}
-          <div className="bg-gray-900/90 px-3 py-2 border-b border-gray-800 flex gap-1.5 overflow-x-auto text-xs scrollbar-none">
+          <div className="bg-surface-base px-3 py-1.5 border-b border-triage-border flex gap-1.5 overflow-x-auto text-[11px] font-mono scrollbar-none">
+            <button
+              onClick={() => handleSendMessage('Book an appointment with Dr. Sarah Jenkins')}
+              className="px-2 py-1 rounded bg-surface-elevated text-gray-300 hover:text-clinical-mint border border-triage-border shrink-0 flex items-center gap-1 transition-colors"
+            >
+              <span>Book Doctor</span>
+              <ChevronRight className="w-3 h-3 text-gray-500" />
+            </button>
             <button
               onClick={() => handleSendMessage('Where is order #ORD-5001?')}
-              className="px-2.5 py-1 rounded-full bg-gray-800 hover:bg-brand-600/30 text-gray-300 hover:text-brand-300 border border-gray-700/60 shrink-0 flex items-center gap-1"
+              className="px-2 py-1 rounded bg-surface-elevated text-gray-300 hover:text-signal-amber border border-triage-border shrink-0 flex items-center gap-1 transition-colors"
             >
               <span>Order #ORD-5001</span>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
+              <ChevronRight className="w-3 h-3 text-gray-500" />
             </button>
             <button
-              onClick={() => handleSendMessage('What is your refund policy?')}
-              className="px-2.5 py-1 rounded-full bg-gray-800 hover:bg-brand-600/30 text-gray-300 hover:text-brand-300 border border-gray-700/60 shrink-0 flex items-center gap-1"
-            >
-              <span>Refund Policy</span>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
-            </button>
-            <button
-              onClick={() => handleSendMessage('I need to speak to a human support representative.')}
-              className="px-2.5 py-1 rounded-full bg-gray-800 hover:bg-brand-600/30 text-gray-300 hover:text-brand-300 border border-gray-700/60 shrink-0 flex items-center gap-1"
+              onClick={() => handleSendMessage('I need human support.')}
+              className="px-2 py-1 rounded bg-surface-elevated text-gray-300 hover:text-signal-violet border border-triage-border shrink-0 flex items-center gap-1 transition-colors"
             >
               <span>Human Agent</span>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
+              <ChevronRight className="w-3 h-3 text-gray-500" />
             </button>
           </div>
 
           {/* Message History */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-gray-950/60">
+          <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-surface-base">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -168,20 +164,21 @@ export default function ChatWidget() {
               >
                 <div className="flex items-end gap-2 max-w-[85%]">
                   {msg.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white text-xs shrink-0 shadow-sm">
-                      <Bot className="w-4 h-4" />
+                    <div className="w-6 h-6 rounded bg-surface-elevated border border-triage-border flex items-center justify-center text-clinical-mint text-xs shrink-0">
+                      <Bot className="w-3.5 h-3.5" />
                     </div>
                   )}
 
                   <div
-                    className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                    className={`p-3 rounded-xl text-xs leading-relaxed font-body ${
                       msg.role === 'user'
-                        ? 'bg-brand-600 text-white rounded-br-none shadow-md'
-                        : 'bg-gray-800/90 text-gray-200 border border-gray-700/60 rounded-bl-none'
+                        ? 'bg-clinical-mint text-ink font-medium rounded-br-none'
+                        : 'bg-surface-elevated text-gray-200 border border-triage-border rounded-bl-none'
                     }`}
                   >
                     {msg.intent && msg.role === 'assistant' && (
-                      <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold text-brand-300 uppercase tracking-wider">
+                      <div className="flex items-center gap-1 mb-1 text-[10px] font-mono font-semibold text-clinical-mint uppercase">
+                        <Sparkles className="w-3 h-3" />
                         <span>Intent: {msg.intent}</span>
                       </div>
                     )}
@@ -189,29 +186,29 @@ export default function ChatWidget() {
                     <p className="whitespace-pre-wrap">{msg.content}</p>
 
                     {msg.ticket_id && (
-                      <div className="mt-2.5 pt-2 border-t border-gray-700/60 flex items-center gap-1.5 text-[11px] text-amber-400 font-semibold">
-                        <Ticket className="w-3.5 h-3.5" />
+                      <div className="mt-2 pt-1.5 border-t border-triage-border flex items-center gap-1 text-[10px] text-signal-amber font-mono font-semibold">
+                        <Ticket className="w-3 h-3" />
                         <span>Ticket Created: #{msg.ticket_id}</span>
                       </div>
                     )}
                   </div>
 
                   {msg.role === 'user' && (
-                    <div className="w-7 h-7 rounded-lg bg-gray-700 flex items-center justify-center text-white text-xs shrink-0">
-                      <User className="w-4 h-4" />
+                    <div className="w-6 h-6 rounded bg-surface-elevated border border-triage-border flex items-center justify-center text-gray-400 text-xs shrink-0">
+                      <User className="w-3.5 h-3.5" />
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] text-gray-500 mt-1 px-1">{msg.timestamp}</span>
+                <span className="text-[10px] font-mono text-gray-500 mt-0.5 px-1">{msg.timestamp}</span>
               </div>
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 text-xs text-gray-400 italic">
-                <div className="w-6 h-6 rounded-lg bg-brand-600/40 flex items-center justify-center text-brand-300">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <div className="flex items-center gap-2 text-xs font-mono text-gray-400 italic">
+                <div className="w-5 h-5 rounded bg-surface-elevated flex items-center justify-center text-clinical-mint">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
                 </div>
-                <span>AI Agent reasoning & fetching tool data...</span>
+                <span>Executing tool triage...</span>
               </div>
             )}
 
@@ -224,21 +221,21 @@ export default function ChatWidget() {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="p-3 bg-gray-900 border-t border-gray-800 flex items-center gap-2"
+            className="p-2.5 bg-surface-base border-t border-triage-border flex items-center gap-2"
           >
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Ask order status, policies, or help..."
-              className="flex-1 bg-gray-800 text-gray-100 placeholder-gray-500 text-xs px-3.5 py-2.5 rounded-xl border border-gray-700/60 focus:outline-none focus:border-brand-500"
+              placeholder="Ask order status, clinic scheduling, API docs..."
+              className="flex-1 bg-surface-elevated text-gray-100 placeholder-gray-500 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || loading}
-              className="gradient-button p-2.5 rounded-xl text-white disabled:opacity-40 transition-opacity"
+              className="p-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-bold disabled:opacity-40 transition-colors"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
             </button>
           </form>
         </div>
@@ -246,3 +243,5 @@ export default function ChatWidget() {
     </div>
   );
 }
+
+
