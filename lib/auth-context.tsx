@@ -135,7 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Real Supabase session check
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async (result: { data: { session: { user: any } | null } }) => {
+      const session = result?.data?.session;
       if (session?.user) {
         const userSession = await buildUserSession(session.user);
         setUser(userSession);
@@ -144,8 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Subscribe to auth state changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(
+      async (_event: any, session: { user: any } | null) => {
         if (session?.user) {
           const userSession = await buildUserSession(session.user);
           setUser(userSession);
@@ -154,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     );
+    const subscription = authListener?.data?.subscription;
 
     return () => subscription.unsubscribe();
   }, []);
