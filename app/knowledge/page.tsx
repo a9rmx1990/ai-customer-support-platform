@@ -1,21 +1,31 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Database, Search, Sparkles, Filter, Stethoscope, ShoppingBag, Building2 } from 'lucide-react';
+import { Database, Search, Sparkles, Filter, Stethoscope, ShoppingBag, Building2, Plus, X, CheckCircle2, FileText } from 'lucide-react';
 import { KNOWLEDGE_CHUNKS, KnowledgeChunk, AppDomain } from '@/lib/mock-data';
 
 export default function KnowledgePage() {
+  const [chunksList, setChunksList] = useState<KnowledgeChunk[]>(KNOWLEDGE_CHUNKS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDomain, setSelectedDomain] = useState<string>('all');
 
+  // Add Document Modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDomain, setNewDomain] = useState<AppDomain>('medical');
+  const [newCategory, setNewCategory] = useState('policy');
+  const [newContent, setNewContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
   const categories = useMemo(() => {
-    const set = new Set(KNOWLEDGE_CHUNKS.map((c) => c.category));
+    const set = new Set(chunksList.map((c) => c.category));
     return ['all', ...Array.from(set)];
-  }, []);
+  }, [chunksList]);
 
   const filteredChunks = useMemo(() => {
-    return KNOWLEDGE_CHUNKS.filter((chunk) => {
+    return chunksList.filter((chunk) => {
       const matchesSearch =
         chunk.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         chunk.chunk_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -26,10 +36,57 @@ export default function KnowledgePage() {
 
       return matchesSearch && matchesCategory && matchesDomain;
     });
-  }, [searchQuery, selectedCategory, selectedDomain]);
+  }, [chunksList, searchQuery, selectedCategory, selectedDomain]);
+
+  const handleAddKnowledgeDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newContent.trim() || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/knowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle,
+          domain: newDomain,
+          category: newCategory,
+          chunk_text: newContent,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.chunk) {
+        setChunksList((prev) => [data.chunk, ...prev]);
+        setNewTitle('');
+        setNewContent('');
+        setShowAddModal(false);
+        setSuccessToast(`Document #${data.chunk.id} successfully indexed into ${newDomain.toUpperCase()} vector store!`);
+        setTimeout(() => setSuccessToast(null), 4000);
+      }
+    } catch (err) {
+      console.error('Ingestion failed:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="p-3.5 rounded-xl bg-clinical-mint/10 border border-clinical-mint/30 text-clinical-mint text-xs font-mono flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{successToast}</span>
+          </div>
+          <button onClick={() => setSuccessToast(null)} className="p-1 hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="surface-elevated p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-triage-border">
         <div className="flex items-center gap-3">
@@ -49,9 +106,19 @@ export default function KnowledgePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-gray-400 bg-surface-base px-3 py-1.5 rounded-lg border border-triage-border">
-          <Sparkles className="w-4 h-4 text-clinical-mint" />
-          <span>Total Indexed Chunks: <strong className="text-white">{KNOWLEDGE_CHUNKS.length}</strong></span>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-gray-400 bg-surface-base px-3 py-1.5 rounded-lg border border-triage-border">
+            <Sparkles className="w-4 h-4 text-clinical-mint" />
+            <span>Indexed Chunks: <strong className="text-white">{chunksList.length}</strong></span>
+          </div>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-3.5 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Document</span>
+          </button>
         </div>
       </div>
 
@@ -65,7 +132,7 @@ export default function KnowledgePage() {
               : 'bg-surface-elevated text-gray-400 hover:text-white border border-triage-border'
           }`}
         >
-          <span>All Domains ({KNOWLEDGE_CHUNKS.length})</span>
+          <span>All Domains ({chunksList.length})</span>
         </button>
 
         <button
@@ -77,7 +144,7 @@ export default function KnowledgePage() {
           }`}
         >
           <Stethoscope className="w-4 h-4" />
-          <span>Medical ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'medical').length})</span>
+          <span>Medical ({chunksList.filter((c) => c.domain === 'medical').length})</span>
         </button>
 
         <button
@@ -89,7 +156,7 @@ export default function KnowledgePage() {
           }`}
         >
           <ShoppingBag className="w-4 h-4" />
-          <span>Retail ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'ecommerce').length})</span>
+          <span>Retail ({chunksList.filter((c) => c.domain === 'ecommerce').length})</span>
         </button>
 
         <button
@@ -101,7 +168,7 @@ export default function KnowledgePage() {
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>SaaS ({KNOWLEDGE_CHUNKS.filter((c) => c.domain === 'saas').length})</span>
+          <span>SaaS ({chunksList.filter((c) => c.domain === 'saas').length})</span>
         </button>
       </div>
 
@@ -168,7 +235,102 @@ export default function KnowledgePage() {
           </div>
         ))}
       </div>
+
+      {/* ADD DOCUMENT / INGESTION MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="surface-overlay w-full max-w-lg p-6 rounded-2xl border border-triage-border shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-triage-border">
+              <h3 className="font-display font-bold text-sm text-white flex items-center gap-2">
+                <FileText className="w-4 h-4 text-clinical-mint" />
+                <span>Ingest New Knowledge Document</span>
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-1 text-gray-400 hover:text-white hover:bg-surface-base rounded-md transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddKnowledgeDoc} className="space-y-3.5 text-xs font-body">
+              <div className="space-y-1">
+                <label className="block text-gray-300 font-medium font-mono text-[11px]">Document Title</label>
+                <input
+                  type="text"
+                  required
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Clinic Appointment Cancellation & Telehealth Policy"
+                  className="w-full bg-surface-base text-gray-100 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-gray-300 font-medium font-mono text-[11px]">Target Domain</label>
+                  <select
+                    value={newDomain}
+                    onChange={(e) => setNewDomain(e.target.value as AppDomain)}
+                    className="w-full bg-surface-base text-gray-100 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-mono"
+                  >
+                    <option value="medical">Medical / Clinical</option>
+                    <option value="ecommerce">Retail & Logistics</option>
+                    <option value="saas">Enterprise SaaS</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-gray-300 font-medium font-mono text-[11px]">Knowledge Category</label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full bg-surface-base text-gray-100 text-xs px-3 py-2 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-mono capitalize"
+                  >
+                    <option value="policy">Policy / Terms</option>
+                    <option value="clinical_faq">Clinical FAQ</option>
+                    <option value="appointments">Doctor Appointments</option>
+                    <option value="lab_results">Diagnostic Labs</option>
+                    <option value="shipping">Shipping & Returns</option>
+                    <option value="billing">Pricing & Invoicing</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-gray-300 font-medium font-mono text-[11px]">Document Text / Policy Content</label>
+                <textarea
+                  rows={5}
+                  required
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  placeholder="Paste clinic guidelines, refund policies, or product specs here. The AI will vector index this content automatically..."
+                  className="w-full bg-surface-base text-gray-100 text-xs p-3 rounded-lg border border-triage-border focus:outline-none focus:border-triage-border-active font-body leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-3.5 py-2 rounded-lg bg-surface-base text-gray-400 hover:text-white border border-triage-border text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs transition-colors disabled:opacity-50"
+                >
+                  {submitting ? 'Indexing Vectors...' : 'Index Document Chunk'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
