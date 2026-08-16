@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchDoctors, getDoctorProfile, getDoctorAvailability } from '@/lib/services/doctor-service';
+import { getBearerToken } from '@/lib/api-auth';
 
 /**
  * GET /api/doctors
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   // GET /api/doctors?doctor_id=XXX&availability=true&date=YYYY-MM-DD
   if (doctorId && getAvailability) {
-    const result = await getDoctorAvailability(doctorId, date);
+    const result = await getDoctorAvailability(doctorId, date, getBearerToken(req));
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
