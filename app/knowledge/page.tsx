@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Database, Search, Sparkles, Filter, Stethoscope, ShoppingBag, Building2, Plus, X, CheckCircle2, FileText, Upload, FileUp } from 'lucide-react';
-import { KNOWLEDGE_CHUNKS, KnowledgeChunk, AppDomain } from '@/lib/mock-data';
+import { MEDICAL_KNOWLEDGE_CHUNKS, KnowledgeChunk, AppDomain } from '@/lib/mock-data';
+import { apiFetch } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
 
 export default function KnowledgePage() {
-  const [chunksList, setChunksList] = useState<KnowledgeChunk[]>(KNOWLEDGE_CHUNKS);
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [chunksList, setChunksList] = useState<KnowledgeChunk[]>(MEDICAL_KNOWLEDGE_CHUNKS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDomain, setSelectedDomain] = useState<string>('all');
@@ -20,6 +25,10 @@ export default function KnowledgePage() {
   const [newContent, setNewContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && user && user.role !== 'doctor' && user.role !== 'admin') router.replace('/');
+  }, [authLoading, user, router]);
 
   const categories = useMemo(() => {
     const set = new Set(chunksList.map((c) => c.category));
@@ -73,12 +82,12 @@ export default function KnowledgePage() {
         formData.append('domain', newDomain);
         formData.append('category', newCategory);
 
-        res = await fetch('/api/knowledge', {
+        res = await apiFetch('/api/knowledge', {
           method: 'POST',
           body: formData,
         });
       } else {
-        res = await fetch('/api/knowledge', {
+        res = await apiFetch('/api/knowledge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -135,7 +144,7 @@ export default function KnowledgePage() {
             <h1 className="text-xl font-display font-bold text-white tracking-tight flex items-center gap-2">
               Multi-Domain RAG Vector Knowledge Store
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-clinical-mint/10 text-clinical-mint border border-clinical-mint/20">
-                pgvector 1536-dim
+                pgvector 768-dim
               </span>
             </h1>
             <p className="text-xs text-gray-400 font-body">
@@ -160,53 +169,14 @@ export default function KnowledgePage() {
         </div>
       </div>
 
-      {/* Domain Selection Tabs */}
+      {/* Domain Selection Badge */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 font-mono text-xs scrollbar-none">
         <button
-          onClick={() => setSelectedDomain('all')}
-          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
-            selectedDomain === 'all'
-              ? 'bg-clinical-mint text-ink'
-              : 'bg-surface-elevated text-gray-400 hover:text-white border border-triage-border'
-          }`}
-        >
-          <span>All Domains ({chunksList.length})</span>
-        </button>
-
-        <button
           onClick={() => setSelectedDomain('medical')}
-          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
-            selectedDomain === 'medical'
-              ? 'bg-clinical-mint text-ink'
-              : 'bg-surface-elevated text-gray-400 hover:text-clinical-mint border border-triage-border'
-          }`}
+          className="px-3.5 py-1.5 rounded-lg font-semibold bg-clinical-mint text-ink transition-colors flex items-center gap-2"
         >
           <Stethoscope className="w-4 h-4" />
-          <span>Medical ({chunksList.filter((c) => c.domain === 'medical').length})</span>
-        </button>
-
-        <button
-          onClick={() => setSelectedDomain('ecommerce')}
-          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
-            selectedDomain === 'ecommerce'
-              ? 'bg-signal-amber text-ink'
-              : 'bg-surface-elevated text-gray-400 hover:text-signal-amber border border-triage-border'
-          }`}
-        >
-          <ShoppingBag className="w-4 h-4" />
-          <span>Retail ({chunksList.filter((c) => c.domain === 'ecommerce').length})</span>
-        </button>
-
-        <button
-          onClick={() => setSelectedDomain('saas')}
-          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
-            selectedDomain === 'saas'
-              ? 'bg-signal-violet text-white'
-              : 'bg-surface-elevated text-gray-400 hover:text-signal-violet border border-triage-border'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>SaaS ({chunksList.filter((c) => c.domain === 'saas').length})</span>
+          <span>Medical & Clinical Knowledge Base ({chunksList.length})</span>
         </button>
       </div>
 
@@ -422,6 +392,3 @@ export default function KnowledgePage() {
     </div>
   );
 }
-
-
-
