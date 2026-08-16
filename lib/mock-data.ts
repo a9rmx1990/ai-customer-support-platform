@@ -100,6 +100,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   { customer_id: 'CUST-1005', name: 'Margaret Hamilton', email: 'margaret@example.com', created_at: '2026-03-12T16:20:00Z' },
 ];
 
+
 // 5 Demo Patients (Medical Clinic)
 export const INITIAL_PATIENTS: Patient[] = [
   { patient_id: 'PAT-2001', name: 'Ada Lovelace', email: 'ada@example.com', dob: '1985-12-10', primary_doctor: 'Dr. Sarah Jenkins (Cardiology)', created_at: '2025-05-10T09:00:00Z' },
@@ -411,79 +412,15 @@ export const KNOWLEDGE_CHUNKS: KnowledgeChunk[] = [
     chunk_text: 'We strictly comply with HIPAA regulations. Your Protected Health Information (PHI) is encrypted end-to-end. Medical records can be requested under Patient Settings -> Records and are delivered within 3 business days.',
   },
 
-  // 🛍️ SHOPPING & E-COMMERCE DELIVERY CHUNKS
+  // 🩺 MEDICAL & CLINICAL KNOWLEDGE CHUNKS
   {
-    id: 1,
-    document_id: 101,
-    title: 'General Support Hours & Contact Info',
-    category: 'FAQ',
-    domain: 'ecommerce',
-    chunk_text: 'Support hours are Monday to Friday, 9:00 AM to 6:00 PM EST. Weekend support is available via email ticket escalation. Emergency server status issues are monitored 24/7. Contact us via chat here or email support@example.com.',
-  },
-  {
-    id: 2,
-    document_id: 102,
-    title: 'Widget Pro Overview & Specifications',
-    category: 'Product',
-    domain: 'ecommerce',
-    chunk_text: 'The Widget Pro is our flagship automation hardware device. It features Wi-Fi 6, Bluetooth 5.2, USB-C fast charging, a 12-hour rechargeable battery, and built-in cloud synchronization. Setup takes under 5 minutes.',
-  },
-  {
-    id: 6,
-    document_id: 106,
-    title: 'Shipping Times, Express & Rates',
-    category: 'Shipping',
-    domain: 'ecommerce',
-    chunk_text: 'Physical orders ship within 1-2 business days. Standard US Shipping takes 3-5 business days ($5.99 or free on orders over $50). Express Shipping takes 1-2 business days ($14.99). International shipping takes 7-14 business days depending on customs.',
-  },
-  {
-    id: 8,
-    document_id: 108,
-    title: '30-Day Refund & Return Policy',
-    category: 'Refund',
-    domain: 'ecommerce',
-    chunk_text: 'We offer a 30-day full refund guarantee on all hardware products. Items must be returned in original packaging with included accessories. Digital subscriptions are refundable within 14 days of initial purchase if unused.',
-  },
-  {
-    id: 11,
-    document_id: 111,
-    title: 'Order Cancellation Policy Before Shipment',
-    category: 'Cancellation',
-    domain: 'ecommerce',
-    chunk_text: 'Physical product orders can be cancelled for a 100% full refund before they enter the Shipped status (i.e. orders in Pending or Processing status). Once an order has shipped, it cannot be cancelled but can be returned under our 30-day money-back guarantee.',
-  },
-  {
-    id: 12,
-    document_id: 112,
-    title: 'Hardware 2-Year Limited Warranty',
-    category: 'Warranty',
-    domain: 'ecommerce',
-    chunk_text: 'All new Widget Pro devices come with a 2-year limited manufacturer warranty against defects in materials and workmanship. If your device malfunctions under normal use, we will repair or replace it free of charge.',
-  },
-
-  // 🏢 ENTERPRISE SAAS CHUNKS
-  {
-    id: 4,
-    document_id: 104,
-    title: 'Subscription Pricing Plans & Invoicing',
-    category: 'Pricing',
-    domain: 'saas',
-    chunk_text: 'We offer three pricing tiers: Starter Plan is $19/month (1 user, core features). Professional Plan is $49/month (up to 5 team members, priority support, API access). Enterprise Plan starts at $199/month (unlimited seats, dedicated SLA, custom database integrations). Billed monthly or annually with a 15% discount.',
-  },
-  {
-    id: 15,
-    document_id: 115,
-    title: 'Team Permissions & User Invites',
-    category: 'Account',
-    domain: 'saas',
-    chunk_text: 'Professional and Enterprise account owners can invite team members under Settings -> Team. Available roles include Admin (full control), Editor (can edit workflows & integrations), and Viewer (read-only monitoring access).',
-  },
-  {
-    id: 18,
-    document_id: 118,
-    title: 'REST API & Webhooks Integration',
-    category: 'API',
-    domain: 'saas',
-    chunk_text: 'We provide a REST API (v2) and Webhook events for custom integrations. API Keys can be generated under Developer Settings. Rate limit is 1,000 requests per minute per API key on Professional plans, and 10,000 requests/min on Enterprise.',
+    id: 209,
+    document_id: 309,
+    title: 'Clinic Operating Hours & Emergency Disclaimer',
+    category: 'Hours & Emergency',
+    domain: 'medical',
+    chunk_text: 'Our outpatient medical clinic is open Monday through Friday from 8:00 AM to 6:00 PM EST, and Saturday from 9:00 AM to 1:00 PM. For life-threatening emergencies (chest pain, severe shortness of breath, sudden numbness), call 911 immediately.',
   },
 ];
+
+export const MEDICAL_KNOWLEDGE_CHUNKS = KNOWLEDGE_CHUNKS;
