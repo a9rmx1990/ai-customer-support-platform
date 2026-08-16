@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, RefreshCw, AlertCircle, Ticket, ChevronRight, Sparkles, Activity } from 'lucide-react';
 import { Message } from '@/lib/mock-data';
+import { apiFetch } from '@/lib/api-client';
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,7 +15,7 @@ export default function ChatWidget() {
       id: 'welcome-1',
       conversation_id: 'conv-init',
       role: 'assistant',
-      content: 'Hello! I am your Multi-Domain AI Assistant. How can I help you today?',
+      content: 'Hello! I am your medical support assistant. How can I help you today?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       intent: 'Greeting',
     },
@@ -51,11 +52,11 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_id: 'CUST-1001',
+          customer_id: 'medical-support',
           conversation_id: conversationId,
           message: text,
         }),
@@ -243,5 +244,3 @@ export default function ChatWidget() {
     </div>
   );
 }
-
-
