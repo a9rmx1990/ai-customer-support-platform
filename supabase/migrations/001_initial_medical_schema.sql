@@ -158,22 +158,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_profiles_updated_at ON public.profiles;
 CREATE TRIGGER trg_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_patient_profiles_updated_at ON public.patient_profiles;
 CREATE TRIGGER trg_patient_profiles_updated_at
   BEFORE UPDATE ON public.patient_profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_doctor_profiles_updated_at ON public.doctor_profiles;
 CREATE TRIGGER trg_doctor_profiles_updated_at
   BEFORE UPDATE ON public.doctor_profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_doctor_availability_updated_at ON public.doctor_availability;
 CREATE TRIGGER trg_doctor_availability_updated_at
   BEFORE UPDATE ON public.doctor_availability
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_appointments_updated_at ON public.appointments;
 CREATE TRIGGER trg_appointments_updated_at
   BEFORE UPDATE ON public.appointments
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -189,7 +194,7 @@ BEGIN
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'patient'),
+    'patient',
     NEW.raw_user_meta_data->>'avatar_url'
   )
   ON CONFLICT (id) DO NOTHING;
