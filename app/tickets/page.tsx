@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Ticket, Plus, Filter, CheckCircle2, AlertTriangle, Clock, RefreshCw, User, X } from 'lucide-react';
 import { SupportTicket } from '@/lib/mock-data';
+import { apiFetch } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
 
 export default function TicketsPage() {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -18,7 +21,7 @@ export default function TicketsPage() {
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/tickets');
+      const res = await apiFetch('/api/tickets');
       const data = await res.json();
       setTickets(data.tickets || []);
     } catch (e) {
@@ -37,7 +40,7 @@ export default function TicketsPage() {
     if (!newIssue.trim()) return;
 
     try {
-      const res = await fetch('/api/tickets', {
+      const res = await apiFetch('/api/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,13 +92,10 @@ export default function TicketsPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          <button
+          {user?.role !== 'doctor' && <button
             onClick={() => setShowCreateModal(true)}
             className="px-3.5 py-2 rounded-lg bg-clinical-mint hover:bg-emerald-400 text-ink font-display font-bold text-xs flex items-center gap-1.5 transition-colors"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Create Ticket</span>
-          </button>
+          ><Plus className="w-4 h-4 stroke-[2.5]" /><span>Create Ticket</span></button>}
         </div>
       </div>
 
@@ -295,4 +295,3 @@ export default function TicketsPage() {
     </div>
   );
 }
-
