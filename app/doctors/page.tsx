@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/auth-context';
 import type { DoctorProfile, AvailableSlot } from '@/lib/services/doctor-service';
+import { apiFetch } from '@/lib/api-client';
 
 // ─── Specialty Icons ─────────────────────────────────────────────────────────
 const SPECIALTY_ICONS: Record<string, string> = {
@@ -269,7 +270,7 @@ function BookingModal({
     setSlotsLoading(true);
     setSelectedSlot(null);
     setError('');
-    fetch(`/api/doctors?doctor_id=${doctor.id}&availability=true&date=${selectedDate}`)
+    apiFetch(`/api/doctors?doctor_id=${doctor.id}&availability=true&date=${selectedDate}`)
       .then(r => r.json())
       .then(d => {
         setSlots(d.slots ?? []);
@@ -286,7 +287,7 @@ function BookingModal({
     setConfirming(true);
     setError('');
     try {
-      const res = await fetch('/api/appointments', {
+      const res = await apiFetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -656,8 +657,43 @@ function BookingModal({
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-export default function DoctorsPage() {
+function DoctorAvailabilityPanel() {
+  const [rows, setRows] = useState<Array<{ id: string; day_of_week: number; start_time: string; end_time: string }>>([]);
+  const [appointments, setAppointments] = useState<Array<{ id: string; patientName?: string; scheduledStart: string; status: string }>>([]);
+  const [day, setDay] = useState('1');
+  const [start, setStart] = useState('09:00');
+  const [end, setEnd] = useState('17:00');
+  const [message, setMessage] = useState('');
+
+  const load = () => Promise.all([
+    apiFetch('/api/doctor/availability').then((r) => r.json()),
+    apiFetch('/api/appointments?view=doctor').then((r) => r.json()),
+  ]).then(([availability, appointmentData]) => { setRows(availability.availability ?? []); setAppointments(appointmentData.appointments ?? []); });
+  useEffect(() => { load(); }, []);
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const response = await apiFetch('/api/doctor/availability', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ day_of_week: Number(day), start_time: start, end_time: end }) });
+    const data = await response.json();
+    setMessage(response.ok ? 'Availability saved.' : (data.error ?? 'Unable to save availability.'));
+    if (response.ok) load();
+  };
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return <main className="mx-auto max-w-5xl space-y-6 px-4 py-10 text-white">
+    <div><p className="font-mono text-xs uppercase text-clinical-mint">Doctor workspace</p><h1 className="text-3xl font-bold">Availability and appointments</h1><p className="mt-2 text-sm text-gray-400">Set the time windows patients can book. Your appointments and patient names are shown in the chat workspace.</p></div>
+    <form onSubmit={save} className="surface-elevated grid gap-3 rounded-xl border border-triage-border p-5 sm:grid-cols-4">
+      <label className="text-sm text-gray-300">Day<select value={day} onChange={(e) => setDay(e.target.value)} className="mt-1 w-full rounded border border-triage-border bg-surface-base p-2"><>{weekdays.map((name, i) => <option key={name} value={i}>{name}</option>)}</></select></label>
+      <label className="text-sm text-gray-300">Start<input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="mt-1 w-full rounded border border-triage-border bg-surface-base p-2" /></label>
+      <label className="text-sm text-gray-300">End<input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="mt-1 w-full rounded border border-triage-border bg-surface-base p-2" /></label>
+      <button className="self-end rounded bg-clinical-mint p-2 font-semibold text-surface-base">Save availability</button>
+      {message && <p className="text-sm text-clinical-mint sm:col-span-4">{message}</p>}
+    </form>
+    <section className="surface-elevated rounded-xl border border-triage-border p-5"><h2 className="mb-4 font-semibold">Saved availability</h2>{rows.length === 0 ? <p className="text-sm text-gray-400">No availability configured yet.</p> : <div className="space-y-2">{rows.map((row) => <div key={row.id} className="flex items-center justify-between rounded border border-triage-border p-3 text-sm"><span>{weekdays[row.day_of_week]} · {row.start_time.slice(0, 5)}–{row.end_time.slice(0, 5)}</span><button onClick={async () => { await apiFetch(`/api/doctor/availability?id=${row.id}`, { method: 'DELETE' }); load(); }} className="text-rose-300">Remove</button></div>)}</div>}</section>
+    <section className="surface-elevated rounded-xl border border-triage-border p-5"><h2 className="mb-4 font-semibold">Patient appointments</h2>{appointments.length === 0 ? <p className="text-sm text-gray-400">No appointments assigned yet.</p> : <div className="space-y-2">{appointments.map((appointment) => <div key={appointment.id} className="flex items-center justify-between rounded border border-triage-border p-3 text-sm"><span><strong>{appointment.patientName ?? 'Patient'}</strong> · {new Date(appointment.scheduledStart).toLocaleString()}</span><span className="text-xs uppercase text-clinical-mint">{appointment.status}</span></div>)}</div>}</section>
+  </main>;
+}
+
+// ─── Patient directory page ──────────────────────────────────────────────────
+function PatientDoctorsPage() {
   const { user } = useAuth();
   const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -669,7 +705,7 @@ export default function DoctorsPage() {
   useEffect(() => {
     setLoading(true);
     const spec = selectedSpecialty === 'All' ? '' : `?specialization=${encodeURIComponent(selectedSpecialty)}`;
-    fetch(`/api/doctors${spec}`)
+    apiFetch(`/api/doctors${spec}`)
       .then(r => r.json())
       .then(d => {
         setDoctors(d.doctors ?? []);
@@ -893,4 +929,10 @@ export default function DoctorsPage() {
       )}
     </>
   );
+}
+
+export default function DoctorsPage() {
+  const { user, loading } = useAuth();
+  if (loading) return <main className="p-10 text-center text-gray-400">Loading workspace…</main>;
+  return user?.role === 'doctor' ? <DoctorAvailabilityPanel /> : <PatientDoctorsPage />;
 }
