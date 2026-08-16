@@ -15,6 +15,7 @@ CREATE OR REPLACE FUNCTION public.book_appointment_atomic(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER  -- Runs with function owner privileges to bypass RLS for booking logic
+SET search_path = public
 AS $$
 DECLARE
   v_patient_id       UUID;
@@ -70,13 +71,23 @@ BEGIN
   END IF;
 
   -- 5. ATOMIC overlap check — lock the rows to prevent concurrent bookings
+  -- PostgreSQL does not permit FOR UPDATE on an aggregate query. Lock one
+  -- matching row first; the exclusion constraint remains the final race-safe guard.
+  PERFORM 1
+  FROM public.appointments
+  WHERE doctor_id = p_doctor_id
+    AND status NOT IN ('cancelled', 'no_show', 'rescheduled')
+    AND tstzrange(scheduled_start, scheduled_end) && tstzrange(p_scheduled_start, p_scheduled_end)
+  LIMIT 1
+  FOR UPDATE;
+
   SELECT COUNT(*) INTO v_overlap_count
   FROM public.appointments
   WHERE
     doctor_id = p_doctor_id
     AND status NOT IN ('cancelled', 'no_show', 'rescheduled')
     AND tstzrange(scheduled_start, scheduled_end) && tstzrange(p_scheduled_start, p_scheduled_end)
-  FOR UPDATE;  -- Exclusive lock prevents concurrent inserts from racing
+  ;
 
   IF v_overlap_count > 0 THEN
     RETURN json_build_object('success', false, 'error', 'SLOT_UNAVAILABLE');
@@ -155,6 +166,7 @@ CREATE OR REPLACE FUNCTION public.cancel_appointment_safe(
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_user_id       UUID;
