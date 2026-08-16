@@ -1,5 +1,17 @@
-import { NextResponse } from 'next/server';
-import { KNOWLEDGE_CHUNKS, KnowledgeChunk, AppDomain } from '@/lib/mock-data';
+import { NextRequest, NextResponse } from 'next/server';
+import { MEDICAL_KNOWLEDGE_CHUNKS, KnowledgeChunk, AppDomain } from '@/lib/mock-data';
+import { requireApiUser, isApiError, getBearerToken } from '@/lib/api-auth';
+import { createServerClient } from '@/lib/supabase/server';
+
+async function requireDoctor(req: NextRequest) {
+  const auth = await requireApiUser(req);
+  if (isApiError(auth)) return auth;
+  const client = createServerClient(getBearerToken(req));
+  if (!client) return NextResponse.json({ error: 'Supabase is not configured.' }, { status: 503 });
+  const { data: profile } = await (client as any).from('profiles').select('role').eq('id', auth.id).single();
+  if (!['doctor', 'admin'].includes(profile?.role)) return NextResponse.json({ error: 'Doctor access required.' }, { status: 403 });
+  return auth;
+}
 
 async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
   try {
@@ -13,17 +25,21 @@ async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireDoctor(req);
+  if (auth instanceof Response) return auth;
   return NextResponse.json({
-    chunks: KNOWLEDGE_CHUNKS,
-    documents_count: KNOWLEDGE_CHUNKS.length,
-    vector_dimension: 1536,
+    chunks: MEDICAL_KNOWLEDGE_CHUNKS,
+    documents_count: MEDICAL_KNOWLEDGE_CHUNKS.length,
+    vector_dimension: 768,
     embedding_model: 'text-embedding-004',
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const auth = await requireDoctor(req);
+    if (auth instanceof Response) return auth;
     const contentType = req.headers.get('content-type') || '';
 
     let title = '';
@@ -36,7 +52,7 @@ export async function POST(req: Request) {
       const formData = await req.formData();
       const file = formData.get('file') as File | null;
       title = (formData.get('title') as string) || '';
-      domain = ((formData.get('domain') as string) || 'medical') as AppDomain;
+      domain = 'medical';
       category = (formData.get('category') as string) || 'policy';
       chunkText = (formData.get('chunk_text') as string) || '';
 
@@ -47,6 +63,9 @@ export async function POST(req: Request) {
         }
 
         const arrayBuffer = await file.arrayBuffer();
+        if (arrayBuffer.byteLength > 10 * 1024 * 1024) {
+          return NextResponse.json({ error: 'File exceeds the 10 MB upload limit.' }, { status: 413 });
+        }
         const buffer = Buffer.from(arrayBuffer);
 
         if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
@@ -58,7 +77,7 @@ export async function POST(req: Request) {
     } else {
       const body = await req.json();
       title = body.title;
-      domain = (body.domain || 'medical') as AppDomain;
+      domain = 'medical';
       category = body.category || 'policy';
       chunkText = body.chunk_text || '';
     }
@@ -71,8 +90,8 @@ export async function POST(req: Request) {
     }
 
     const cleanedText = chunkText.replace(/\s+/g, ' ').trim();
-    const newId = 100 + KNOWLEDGE_CHUNKS.length + 1;
-    const newDocId = 100 + KNOWLEDGE_CHUNKS.length + 1;
+    const newId = 100 + MEDICAL_KNOWLEDGE_CHUNKS.length + 1;
+    const newDocId = 100 + MEDICAL_KNOWLEDGE_CHUNKS.length + 1;
 
     const newChunk: KnowledgeChunk = {
       id: newId,
@@ -83,7 +102,7 @@ export async function POST(req: Request) {
       chunk_text: cleanedText.slice(0, 1200),
     };
 
-    KNOWLEDGE_CHUNKS.unshift(newChunk);
+    MEDICAL_KNOWLEDGE_CHUNKS.unshift(newChunk);
 
     return NextResponse.json(
       {
@@ -92,7 +111,7 @@ export async function POST(req: Request) {
           ? `File processed & indexed into ${domain.toUpperCase()} vector store.`
           : `Document chunk indexed into ${domain.toUpperCase()} vector store.`,
         chunk: newChunk,
-        total_chunks: KNOWLEDGE_CHUNKS.length,
+        total_chunks: MEDICAL_KNOWLEDGE_CHUNKS.length,
       },
       { status: 201 }
     );
@@ -104,6 +123,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
-
-
