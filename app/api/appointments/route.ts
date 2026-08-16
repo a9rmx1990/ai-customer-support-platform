@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPatientAppointments, bookAppointment } from '@/lib/services/appointment-service';
+import { getPatientAppointments, getDoctorAppointments, bookAppointment, cancelAppointment } from '@/lib/services/appointment-service';
 import { getAppointmentsStore } from '@/lib/ai-agent-engine';
+import { requireApiUser, isApiError, getBearerToken } from '@/lib/api-auth';
+import { createServerClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUser(req);
+  if (isApiError(auth)) return auth;
   const { searchParams } = new URL(req.url);
-  const patientId = searchParams.get('patient_id');
+  const accessToken = getBearerToken(req);
+  if (searchParams.get('view') === 'doctor' && process.env.NODE_ENV !== 'production') {
+    return NextResponse.json({ appointments: getAppointmentsStore() });
+  }
+  if (process.env.NODE_ENV === 'production' && searchParams.get('view') === 'doctor') {
+    const result = await getDoctorAppointmentsForUser(auth.id, accessToken);
+    if (!result.success) return NextResponse.json({ error: result.error ?? 'DOCTOR_APPOINTMENTS_FAILED' }, { status: 500 });
+    return NextResponse.json({ appointments: result.appointments });
+  }
+  const patientId = process.env.NODE_ENV === 'production' ? auth.id : searchParams.get('patient_id');
 
   if (!patientId) {
     return NextResponse.json({ error: 'patient_id is required' }, { status: 400 });
   }
 
   try {
-    const result = await getPatientAppointments(patientId);
+    const result = await getPatientAppointments(patientId, accessToken);
     if (!result.success) {
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: result.error ?? 'APPOINTMENTS_FETCH_FAILED' }, { status: 500 });
+      }
       // Graceful fallback to legacy in-memory store
       const legacyStore = getAppointmentsStore();
       const filtered = legacyStore.filter(
@@ -33,8 +49,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiUser(req);
+    if (isApiError(auth)) return auth;
     const body = await req.json();
     const { doctor_id, scheduled_start, scheduled_end, reason } = body;
+
+    // Doctors cannot book for themselves or other doctors. Booking is a
+    // patient action; the database function enforces this in production too.
+    const roleClient = createServerClient(getBearerToken(req));
+    if (roleClient) {
+      const { data: profile } = await (roleClient as any).from('profiles').select('role').eq('id', auth.id).maybeSingle();
+      if (profile?.role === 'doctor') return NextResponse.json({ error: 'Doctors must use a patient account to book appointments.' }, { status: 403 });
+    }
 
     // Supabase-backed booking path
     if (doctor_id && scheduled_start && scheduled_end) {
@@ -43,6 +69,7 @@ export async function POST(req: NextRequest) {
         scheduledStart: scheduled_start,
         scheduledEnd: scheduled_end,
         reason,
+        patientAuthToken: getBearerToken(req),
       });
 
       if (!result.success) {
@@ -62,6 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Legacy mock booking path (backwards compat when Supabase not configured)
+    if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Legacy appointment booking is disabled in production.' }, { status: 410 });
     const { patient_id, doctor_name, date_time, specialty } = body;
     if (!patient_id || !doctor_name) {
       return NextResponse.json({ error: 'patient_id and doctor_name are required' }, { status: 400 });
@@ -85,4 +113,25 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Failed to schedule appointment' }, { status: 500 });
   }
+}
+
+async function getDoctorAppointmentsForUser(userId: string, accessToken?: string) {
+  const client = createServerClient(accessToken);
+  if (!client) return { success: false, appointments: [], error: 'SUPABASE_NOT_CONFIGURED' };
+  const { data, error } = await (client as any).from('doctor_profiles').select('id').eq('user_id', userId).maybeSingle();
+  if (error || !data) return { success: false, appointments: [], error: 'DOCTOR_PROFILE_NOT_FOUND' };
+  return getDoctorAppointments(data.id, accessToken);
+}
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireApiUser(req);
+  if (isApiError(auth)) return auth;
+  const appointmentId = new URL(req.url).searchParams.get('appointment_id');
+  if (!appointmentId) return NextResponse.json({ error: 'appointment_id is required' }, { status: 400 });
+  const result = await cancelAppointment(appointmentId, getBearerToken(req));
+  if (!result.success) {
+    const status = result.error === 'UNAUTHENTICATED' ? 401 : result.error === 'UNAUTHORIZED' ? 403 : 400;
+    return NextResponse.json({ error: result.error ?? 'CANCELLATION_FAILED' }, { status });
+  }
+  return NextResponse.json(result);
 }
