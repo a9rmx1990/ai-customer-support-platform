@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrdersStore } from '@/lib/ai-agent-engine';
+import { requireApiUser, isApiError } from '@/lib/api-auth';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUser(req);
+  if (isApiError(auth)) return auth;
+  if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Orders require a durable authenticated data service.' }, { status: 501 });
   const { searchParams } = new URL(req.url);
   const customerId = searchParams.get('customer_id');
   const orderId = searchParams.get('order_id');
@@ -23,6 +27,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiUser(req);
+    if (isApiError(auth)) return auth;
+    if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Orders require a durable authenticated data service.' }, { status: 501 });
     const body = await req.json();
     const { action, order_id, customer_id, address, reason } = body;
 
