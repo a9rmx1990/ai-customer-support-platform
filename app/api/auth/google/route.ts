@@ -22,6 +22,7 @@ function parseJwtPayload(token: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Use Supabase Google OAuth in production.' }, { status: 410 });
     const body = await req.json().catch(() => ({}));
     const { credential, name, email, google_id, avatar } = body;
 
