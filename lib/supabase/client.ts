@@ -86,8 +86,8 @@ function getSyncClient(): any {
   if (_syncClient) return _syncClient;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createClient } = require('@supabase/supabase-js');
-    _syncClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { createBrowserClient } = require('@supabase/ssr');
+    _syncClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
     return _syncClient;
   } catch {
     return null;
