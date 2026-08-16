@@ -5,7 +5,7 @@ import {
   INITIAL_APPOINTMENTS,
   INITIAL_LAB_RESULTS,
   INITIAL_TICKETS,
-  KNOWLEDGE_CHUNKS,
+  MEDICAL_KNOWLEDGE_CHUNKS,
   SupportTicket,
   Order,
   Customer,
@@ -512,7 +512,7 @@ export async function runAgentEngine(input: AgentRequest): Promise<AgentResponse
   toolsUsed.push('knowledge_base');
 
   // ISOLATED DOMAIN VECTOR SEARCH
-  const domainChunks = KNOWLEDGE_CHUNKS.filter((c) => c.domain === domain || (domain === 'ecommerce' && c.domain === 'saas'));
+  const domainChunks = MEDICAL_KNOWLEDGE_CHUNKS;
 
   let bestChunk: KnowledgeChunk | null = null;
   let bestScore = 0;
@@ -561,18 +561,34 @@ export async function runAgentEngine(input: AgentRequest): Promise<AgentResponse
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey.length > 10 && !apiKey.includes('your_gemini_api_key')) {
     try {
-      const sysPrompt = domain === 'medical'
-        ? 'You are a professional Clinical AI Assistant. Provide helpful, accurate, empathetic medical customer service information. Remind users to call 911 for emergencies.'
-        : 'You are a helpful Customer Support AI Assistant for an e-commerce platform. Provide polite, clear customer service assistance.';
+      const contextSnippet = retrievedDocs.length > 0
+        ? `\n\nRelevant Medical Knowledge Context:\n${retrievedDocs.join('\n---\n')}`
+        : '';
 
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const sysPrompt = domain === 'medical'
+        ? `You are a professional Clinical AI Assistant. Provide helpful, accurate, empathetic medical customer service information. Remind users to call 911 for emergencies.${contextSnippet}`
+        : `You are a helpful Customer Support AI Assistant.${contextSnippet}`;
+
+      // Primary Gemini endpoint with fallback model selection
+      let geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `${sysPrompt}\n\nUser Question: ${rawMsg}` }] }],
         }),
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(8000),
       });
+
+      if (!geminiRes.ok) {
+        geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${sysPrompt}\n\nUser Question: ${rawMsg}` }] }],
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+      }
 
       if (geminiRes.ok) {
         const geminiData = await geminiRes.json();
