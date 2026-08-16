@@ -16,7 +16,7 @@ export default function Navbar() {
     { href: '/chat?domain=medical', label: 'Support Chat', icon: MessageSquare },
     { href: '/doctors', label: 'Doctors', icon: Users },
     { href: '/tickets', label: 'Tickets', icon: Ticket },
-    { href: '/knowledge', label: 'Knowledge', icon: Database },
+    ...(user?.role === 'doctor' || user?.role === 'admin' ? [{ href: '/knowledge', label: 'Knowledge', icon: Database }] : []),
     { href: '/architecture', label: 'Architecture', icon: Layers },
   ];
 
@@ -153,6 +153,5 @@ export default function Navbar() {
     </header>
   );
 }
-
 
 
