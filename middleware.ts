@@ -1,82 +1,44 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
-/**
- * Routes that require an authenticated session.
- * Matching is prefix-based via the `matcher` config below, so
- * /chat, /chat/123, /tickets/45/notes, etc. are all covered.
- */
-const PROTECTED_ROUTES = [
-    "/chat",
-    "/tickets",
-    "/doctors",
-    "/knowledge",
-    "/architecture",
-];
+const protectedPrefixes = ['/chat', '/tickets', '/doctors', '/knowledge', '/architecture'];
 
-function isProtectedRoute(pathname: string): boolean {
-    return PROTECTED_ROUTES.some(
-        (route) => pathname === route || pathname.startsWith(`${route}/`)
-    );
+function isProtected(pathname: string) {
+  return protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-/**
- * Supabase's auth-helpers / @supabase/ssr packages store the session
- * in one or more cookies named like `sb-<project-ref>-auth-token`
- * (sometimes chunked into `sb-<ref>-auth-token.0`, `.1`, etc. for large
- * tokens). We check for any cookie matching that pattern with a
- * non-empty value.
- */
-function hasSupabaseSession(request: NextRequest): boolean {
-    const cookies = request.cookies.getAll();
-    return cookies.some(
-        (cookie) =>
-            cookie.name.startsWith("sb-") &&
-            cookie.name.includes("-auth-token") &&
-            cookie.value.length > 0
-    );
+/** Refreshes the Supabase session and protects medical application routes. */
+export async function middleware(request: NextRequest) {
+  if (!isProtected(request.nextUrl.pathname)) return NextResponse.next();
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    if (process.env.NODE_ENV !== 'production' && request.cookies.get('app_session')?.value) return NextResponse.next();
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (cookies) => {
+        cookies.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(loginUrl);
+  }
+  return response;
 }
 
-/**
- * Demo-mode fallback: a simple "app_session" cookie set by the app on
- * login when Supabase isn't configured. See lib/auth-context.tsx.
- */
-function hasDemoSession(request: NextRequest): boolean {
-    const cookie = request.cookies.get("app_session");
-    return !!cookie?.value;
-}
-
-export function middleware(request: NextRequest) {
-    const { pathname, search } = request.nextUrl;
-
-    if (!isProtectedRoute(pathname)) {
-        return NextResponse.next();
-    }
-
-    const isAuthenticated = hasSupabaseSession(request) || hasDemoSession(request);
-
-    if (!isAuthenticated) {
-        const loginUrl = new URL("/login", request.url);
-        // Preserve where the user was headed (path + any query string) so
-        // the login page can send them back after a successful login.
-        loginUrl.searchParams.set("redirect", `${pathname}${search}`);
-        return NextResponse.redirect(loginUrl);
-    }
-
-    return NextResponse.next();
-}
-
-/**
- * Limits which requests the middleware runs on. This is more efficient
- * than checking pathname manually for every single request (static
- * assets, /api/*, /login, /signup, and / are never intercepted).
- */
 export const config = {
-    matcher: [
-        "/chat/:path*",
-        "/tickets/:path*",
-        "/doctors/:path*",
-        "/knowledge/:path*",
-        "/architecture/:path*",
-    ],
+  matcher: ['/chat/:path*', '/tickets/:path*', '/doctors/:path*', '/knowledge/:path*', '/architecture/:path*'],
 };
