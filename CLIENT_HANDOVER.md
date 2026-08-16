@@ -68,7 +68,7 @@ Welcome to your production-ready **AI Customer Support & Escalation Platform**. 
 2. Click **`Upload / Add Document`**.
 3. Select **Target Domain** (Medical, Retail, SaaS) and **Category**.
 4. Either drag and drop a **PDF / TXT / Markdown file** or paste readable policy text.
-5. Click **`Upload & Index PDF`** — the system will parse text, create 1536-dim vector chunks, and make it searchable immediately for AI RAG responses.
+5. Click **`Upload & Index PDF`** — the system will parse text, create 768-dim vector chunks, and make it searchable immediately for AI RAG responses.
 
 ---
 
