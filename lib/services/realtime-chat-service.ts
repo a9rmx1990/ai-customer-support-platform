@@ -52,7 +52,7 @@ export interface PatientProfileItem {
 // fetchPatientProfiles
 // Returns all registered patient profiles for doctor initiation
 // ---------------------------------------------------------------------------
-export async function fetchPatientProfiles(): Promise<{
+export async function fetchPatientProfiles(currentUserId: string): Promise<{
   success: boolean;
   patients: PatientProfileItem[];
 }> {
@@ -61,19 +61,35 @@ export async function fetchPatientProfiles(): Promise<{
   }
 
   try {
+    const { data: doctorProfile, error: doctorError } = await supabase
+      .from('doctor_profiles')
+      .select('id')
+      .eq('user_id', currentUserId)
+      .maybeSingle();
+
+    if (doctorError || !doctorProfile) return { success: false, patients: [] };
+
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, role, avatar_url')
-      .eq('role', 'patient');
+      .from('appointments')
+      .select('patient_id, patient:profiles!patient_id (id, full_name, role, avatar_url)')
+      .eq('doctor_id', doctorProfile.id)
+      .not('status', 'in', '(cancelled,no_show)');
 
     if (error) return { success: false, patients: [] };
 
-    const patients: PatientProfileItem[] = (data ?? []).map((p: any) => ({
-      id: p.id,
-      fullName: p.full_name || 'Patient Account',
-      role: 'patient',
-      avatarUrl: p.avatar_url ?? null,
-    }));
+    const uniquePatients = new Map<string, PatientProfileItem>();
+    (data ?? []).forEach((row: any) => {
+      const p = row.patient;
+      if (!p) return;
+      uniquePatients.set(p.id, {
+        id: p.id,
+        fullName: p.full_name || 'Patient Account',
+        role: 'patient',
+        avatarUrl: p.avatar_url ?? null,
+      });
+    });
+
+    const patients: PatientProfileItem[] = Array.from(uniquePatients.values());
 
     return { success: true, patients };
   } catch {
@@ -289,7 +305,7 @@ export async function sendRealtimeMessage(params: {
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', params.conversationId)
-      .then(() => {});
+      .then(() => { });
 
     return {
       success: true,
@@ -319,7 +335,7 @@ export function subscribeToConversationMessages(
   onNewMessage: (msg: RealtimeChatMessage) => void
 ): () => void {
   if (!supabaseConfigured || typeof window === 'undefined') {
-    return () => {};
+    return () => { };
   }
 
   const channelName = `conversation:${conversationId}:${Date.now()}`;
