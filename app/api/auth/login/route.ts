@@ -3,6 +3,7 @@ import { authenticateUser, authenticateDemoUser } from '@/lib/auth-service';
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Use Supabase Auth in production.' }, { status: 410 });
     const body = await req.json().catch(() => ({}));
     const { email, password, is_demo_click } = body;
 
