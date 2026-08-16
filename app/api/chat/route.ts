@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAgentEngine, AgentRequest } from '@/lib/ai-agent-engine';
-import { AppDomain } from '@/lib/mock-data';
+import { requireApiUser, isApiError } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiUser(req);
+    if (isApiError(auth)) return auth;
     const body = await req.json().catch(() => ({}));
-    const domain: AppDomain = (body.domain || 'medical') as AppDomain;
-    const customer_id = (body.customer_id || (domain === 'medical' ? 'PAT-2001' : 'CUST-1001')).toString().trim();
+    const domain = 'medical' as const;
+    const customer_id = process.env.NODE_ENV === 'production'
+      ? auth.id
+      : (body.customer_id || 'PAT-2001').toString().trim();
     const conversation_id = (body.conversation_id || `conv-${Date.now()}`).toString().trim();
     const message = (body.message || '').toString().trim();
 
@@ -38,6 +42,7 @@ export async function POST(req: NextRequest) {
               : {}),
           },
           body: JSON.stringify({
+            user_id: auth.id,
             customer_id,
             conversation_id,
             message,
