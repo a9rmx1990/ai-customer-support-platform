@@ -97,8 +97,8 @@ export async function searchDoctors(specialization?: string): Promise<{
   if (!supabaseConfigured) {
     const results = specialization
       ? MOCK_DOCTORS.filter(d =>
-          d.specialization.toLowerCase().includes(specialization.toLowerCase())
-        )
+        d.specialization.toLowerCase().includes(specialization.toLowerCase())
+      )
       : MOCK_DOCTORS;
     return { success: true, doctors: results };
   }
@@ -226,7 +226,7 @@ export async function getDoctorProfile(doctorId: string): Promise<{
 // ---------------------------------------------------------------------------
 // getDoctorAvailability — compute available 30-min slots for a given date
 // ---------------------------------------------------------------------------
-export async function getDoctorAvailability(doctorId: string, date: string): Promise<{
+export async function getDoctorAvailability(doctorId: string, date: string, accessToken?: string): Promise<{
   success: boolean;
   slots: AvailableSlot[];
   error?: string;
@@ -238,7 +238,7 @@ export async function getDoctorAvailability(doctorId: string, date: string): Pro
   }
 
   try {
-    const supabase = createServerClient()!;
+    const supabase = createServerClient(accessToken)!;
     const dateObj = new Date(date);
     const dayOfWeek = dateObj.getDay(); // 0 = Sun
 
@@ -252,9 +252,9 @@ export async function getDoctorAvailability(doctorId: string, date: string): Pro
 
     const exception = exceptionRaw as { status: string } | null;
     if (exception &&
-        (exception.status === 'unavailable' ||
-         exception.status === 'leave' ||
-         exception.status === 'holiday')) {
+      (exception.status === 'unavailable' ||
+        exception.status === 'leave' ||
+        exception.status === 'holiday')) {
       return { success: true, slots: [] };
     }
 
@@ -264,10 +264,11 @@ export async function getDoctorAvailability(doctorId: string, date: string): Pro
       .select('start_time, end_time, is_available')
       .eq('doctor_id', doctorId)
       .eq('day_of_week', dayOfWeek)
-      .maybeSingle();
+      .eq('is_available', true)
+      .order('start_time');
 
-    const availability = availRaw as { start_time: string; end_time: string; is_available: boolean } | null;
-    if (availError || !availability || !availability.is_available) {
+    const availability = (availRaw ?? []) as Array<{ start_time: string; end_time: string; is_available: boolean }>;
+    if (availError || availability.length === 0) {
       return { success: true, slots: [] };
     }
 
@@ -289,13 +290,9 @@ export async function getDoctorAvailability(doctorId: string, date: string): Pro
     }));
 
     // Generate 30-min slots within availability window
-    const slots = generate30MinSlots(
-      doctorId,
-      date,
-      availability.start_time,
-      availability.end_time,
-      bookedRanges
-    );
+    const slots = availability.flatMap((window) => generate30MinSlots(
+      doctorId, date, window.start_time, window.end_time, bookedRanges
+    ));
 
     return { success: true, slots };
   } catch {
