@@ -22,6 +22,7 @@ const supabaseConfigured = SUPABASE_URL.startsWith('https://');
 export interface AppointmentRecord {
   id: string;
   patientId: string;
+  patientName?: string;
   doctorId: string;
   doctorName: string;
   specialization: string;
@@ -45,7 +46,7 @@ export interface BookingResult {
 // getPatientAppointments — fetch all appointments for the authenticated patient
 // patientId is the Supabase auth.users UUID
 // ---------------------------------------------------------------------------
-export async function getPatientAppointments(patientUserId: string): Promise<{
+export async function getPatientAppointments(patientUserId: string, accessToken?: string): Promise<{
   success: boolean;
   appointments: AppointmentRecord[];
   error?: string;
@@ -71,7 +72,7 @@ export async function getPatientAppointments(patientUserId: string): Promise<{
   }
 
   try {
-    const supabase = createServerClient()!;
+    const supabase = createServerClient(accessToken)!;
     const { data, error } = await supabase
       .from('appointments')
       .select(`
@@ -110,7 +111,7 @@ export async function getPatientAppointments(patientUserId: string): Promise<{
 // ---------------------------------------------------------------------------
 // getDoctorAppointments — fetch appointments for an authenticated doctor
 // ---------------------------------------------------------------------------
-export async function getDoctorAppointments(doctorProfileId: string): Promise<{
+export async function getDoctorAppointments(doctorProfileId: string, accessToken?: string): Promise<{
   success: boolean;
   appointments: AppointmentRecord[];
   error?: string;
@@ -120,7 +121,7 @@ export async function getDoctorAppointments(doctorProfileId: string): Promise<{
   }
 
   try {
-    const supabase = createServerClient()!;
+    const supabase = createServerClient(accessToken)!;
     const { data, error } = await supabase
       .from('appointments')
       .select(`
@@ -140,6 +141,7 @@ export async function getDoctorAppointments(doctorProfileId: string): Promise<{
     const appointments: AppointmentRecord[] = (data ?? []).map((row: any) => ({
       id: row.id,
       patientId: row.patient_id,
+      patientName: row.patient_profile?.full_name ?? 'Patient',
       doctorId: row.doctor_id,
       doctorName: row.doctor_profiles?.profiles?.full_name ?? 'Doctor',
       specialization: row.doctor_profiles?.specialization ?? 'General',
@@ -182,7 +184,7 @@ export async function bookAppointment(params: {
   }
 
   try {
-    const supabase = createServerClient()!;
+    const supabase = createServerClient(params.patientAuthToken)!;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).rpc('book_appointment_atomic', {
       p_doctor_id: params.doctorId,
@@ -219,7 +221,7 @@ export async function bookAppointment(params: {
 // ---------------------------------------------------------------------------
 // cancelAppointment — calls the safe cancellation function with auth check
 // ---------------------------------------------------------------------------
-export async function cancelAppointment(appointmentId: string): Promise<{
+export async function cancelAppointment(appointmentId: string, accessToken?: string): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -228,7 +230,7 @@ export async function cancelAppointment(appointmentId: string): Promise<{
   }
 
   try {
-    const supabase = createServerClient()!;
+    const supabase = createServerClient(accessToken)!;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any).rpc('cancel_appointment_safe', {
       p_appointment_id: appointmentId,
