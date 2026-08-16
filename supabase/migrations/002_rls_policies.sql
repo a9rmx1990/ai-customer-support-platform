@@ -17,6 +17,32 @@ ALTER TABLE public.appointments              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs               ENABLE ROW LEVEL SECURITY;
 
+-- Make this migration safe to re-run from the Supabase SQL editor. PostgreSQL
+-- has no CREATE OR REPLACE POLICY, so remove only the policies owned by this
+-- migration before recreating them below.
+DO $$
+DECLARE
+  policy_row RECORD;
+BEGIN
+  FOR policy_row IN
+    SELECT schemaname, tablename, policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'profiles', 'patient_profiles', 'doctor_profiles',
+        'doctor_availability', 'doctor_schedule_exceptions',
+        'appointments', 'notifications', 'audit_logs'
+      )
+  LOOP
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON %I.%I',
+      policy_row.policyname,
+      policy_row.schemaname,
+      policy_row.tablename
+    );
+  END LOOP;
+END $$;
+
 -- =============================================================================
 -- HELPER: Check if the current user is an admin
 -- =============================================================================
