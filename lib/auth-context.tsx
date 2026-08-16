@@ -310,7 +310,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (error) {
         console.warn('Supabase Google OAuth error (is Google provider enabled in Supabase dashboard?):', error.message);
-        // Fallback to demo user if Google Provider is disabled in Supabase
+        if (process.env.NODE_ENV === 'production') return false;
+        // Demo fallback is development-only.
         setUser(DEMO_SESSION);
         localStorage.setItem('app_user_session', JSON.stringify(DEMO_SESSION));
         setAppSessionCookie();
@@ -332,7 +333,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (error) {
         console.warn('Supabase Google ID Token error:', error.message);
-        // Fallback to demo session if Google provider is not enabled in Supabase
+        if (process.env.NODE_ENV === 'production') return false;
+        // Demo fallback is development-only.
         setUser(DEMO_SESSION);
         localStorage.setItem('app_user_session', JSON.stringify(DEMO_SESSION));
         setAppSessionCookie();
