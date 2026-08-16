@@ -11,9 +11,11 @@ const isConfigured = supabaseUrl.startsWith('https://') && supabaseAnonKey.lengt
  * Server-side Supabase client (anon key).
  * Returns null when credentials are not configured.
  */
-export function createServerClient() {
+export function createServerClient(accessToken?: string) {
   if (!isConfigured) return null;
-  return createClient<Database>(supabaseUrl, supabaseAnonKey);
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, accessToken
+    ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+    : undefined);
 }
 
 /**
@@ -23,10 +25,8 @@ export function createServerClient() {
  * NEVER expose this client to the browser.
  */
 export function createAdminClient() {
-  if (!isConfigured) return null;
-  const key = supabaseServiceRoleKey && supabaseServiceRoleKey !== 'your-service-role-key'
-    ? supabaseServiceRoleKey
-    : supabaseAnonKey;
+  if (!isConfigured || !supabaseServiceRoleKey || supabaseServiceRoleKey === 'your-service-role-key') return null;
+  const key = supabaseServiceRoleKey;
   return createClient<Database>(supabaseUrl, key, {
     auth: {
       autoRefreshToken: false,
