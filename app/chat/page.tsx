@@ -53,6 +53,7 @@ import {
   PatientProfileItem,
 } from '@/lib/services/realtime-chat-service';
 import type { DoctorProfile } from '@/lib/services/doctor-service';
+import { apiFetch } from '@/lib/api-client';
 
 // ─── LIVE DOCTOR-PATIENT REALTIME CHAT COMPONENT ─────────────────────────────
 function LiveDoctorChatWorkspace() {
@@ -98,12 +99,12 @@ function LiveDoctorChatWorkspace() {
     // Role-based directory fetching:
     // Doctors see Registered Patients; Patients see Clinic Doctors
     if (currentUserRole === 'doctor') {
-      fetchPatientProfiles().then((res) => {
+      fetchPatientProfiles(currentUserId).then((res) => {
         setPatients(res.patients);
         setLoading(false);
       });
     } else {
-      fetch('/api/doctors')
+      apiFetch('/api/doctors')
         .then((r) => r.json())
         .then((d) => setDoctors(d.doctors ?? []))
         .catch(() => setDoctors([]))
@@ -513,15 +514,15 @@ function ChatPageContent() {
   const refreshDomainData = async () => {
     try {
       if (activeDomain === 'medical') {
-        const resApt = await fetch(`/api/appointments?patient_id=${selectedPatient.patient_id}`);
+        const resApt = await apiFetch(`/api/appointments?patient_id=${selectedPatient.patient_id}`);
         const dataApt = await resApt.json();
         if (dataApt.appointments) setPatientAppointments(dataApt.appointments);
 
-        const resLab = await fetch(`/api/lab-results?patient_id=${selectedPatient.patient_id}`);
+        const resLab = await apiFetch(`/api/lab-results?patient_id=${selectedPatient.patient_id}`);
         const dataLab = await resLab.json();
         if (dataLab.results) setPatientLabResults(dataLab.results);
       } else {
-        const resOrd = await fetch(`/api/orders?customer_id=${selectedCustomer.customer_id}`);
+        const resOrd = await apiFetch(`/api/orders?customer_id=${selectedCustomer.customer_id}`);
         const dataOrd = await resOrd.json();
         if (dataOrd.orders) setCustomerOrders(dataOrd.orders);
       }
@@ -551,7 +552,7 @@ function ChatPageContent() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+        const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
