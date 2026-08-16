@@ -3,6 +3,7 @@ import { registerNewPatient } from '@/lib/auth-service';
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Use Supabase Auth in production.' }, { status: 410 });
     const body = await req.json().catch(() => ({}));
     const { name, email, password, dob, primary_doctor } = body;
 
