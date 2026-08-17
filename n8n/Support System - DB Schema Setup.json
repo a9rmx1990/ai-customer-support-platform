@@ -1,0 +1,13 @@
+{
+  "name": "Medical Supabase Schema Check",
+  "nodes": [
+    {"parameters": {}, "id": "manual", "name": "Run Medical Schema Check", "type": "n8n-nodes-base.manualTrigger", "typeVersion": 1, "position": [-220, 220]},
+    {"parameters": {"operation": "executeQuery", "query": "SELECT to_regclass('public.profiles') AS profiles, to_regclass('public.appointments') AS appointments, to_regclass('public.knowledge_documents') AS knowledge_documents, to_regclass('public.knowledge_chunks') AS knowledge_chunks, to_regclass('public.support_conversations') AS support_conversations, to_regclass('public.support_messages') AS support_messages;"}, "id": "check", "name": "Verify Medical Supabase Tables", "type": "n8n-nodes-base.postgres", "typeVersion": 2.7, "position": [40, 220], "credentials": {"postgres": {"id": "SUPABASE_POSTGRES_CREDENTIAL_ID", "name": "Supabase Postgres"}}}
+  ],
+  "connections": {"Run Medical Schema Check": {"main": [[{"node": "Verify Medical Supabase Tables", "type": "main", "index": 0}]]}},
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "medical-schema-v2",
+  "meta": {"templateCredsSetupCompleted": true},
+  "tags": []
+}
