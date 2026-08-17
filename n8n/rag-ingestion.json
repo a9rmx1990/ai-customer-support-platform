@@ -6,7 +6,7 @@
     {"parameters": {"mode": "insert", "tableName": "knowledge_chunks", "options": {"columnNames": {"values": {"contentColumnName": "chunk_text", "vectorColumnName": "embedding", "metadataColumnName": "metadata"}}}}, "id": "vector-store", "name": "Store Medical Embeddings", "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector", "typeVersion": 1, "position": [220, 260], "credentials": {"postgres": {"id": "SUPABASE_POSTGRES_CREDENTIAL_ID", "name": "Supabase Postgres"}}},
     {"parameters": {"jsonData": "={{ $json.text }}", "jsonMode": "expressionData"}, "id": "loader", "name": "Load Medical Text", "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader", "typeVersion": 1, "position": [-80, 260]},
     {"parameters": {"chunkSize": 800, "chunkOverlap": 120}, "id": "splitter", "name": "Split Medical Text", "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter", "typeVersion": 1, "position": [-80, 440]},
-    {"parameters": {"modelName": "models/text-embedding-004"}, "id": "embeddings", "name": "Gemini Medical Embeddings", "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini", "typeVersion": 1, "position": [220, 480], "credentials": {"googlePalmApi": {"id": "GEMINI_API_CREDENTIAL_ID", "name": "Google Gemini API"}}}
+    {"parameters": {"modelName": "models/gemini-embedding-001"}, "id": "embeddings", "name": "Gemini Medical Embeddings", "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini", "typeVersion": 1, "position": [220, 480], "credentials": {"googlePalmApi": {"id": "GEMINI_API_CREDENTIAL_ID", "name": "Google Gemini API"}}}
   ],
   "connections": {
     "Run Medical Ingestion": {"main": [[{"node": "Medical Documents", "type": "main", "index": 0}]]},
