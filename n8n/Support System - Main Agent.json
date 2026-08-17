@@ -1,0 +1,868 @@
+{
+  "name": "Support System - Main Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## INPUT & VALIDATION\\n\\nWebhook accepts POST `{ customer_id, conversation_id, message }`. `Validate Input` normalizes fields and generates a `conversation_id` if missing. Invalid payloads are logged and answered with a safe 400 JSON without running the agent.",
+        "height": 320,
+        "width": 380
+      },
+      "id": "e19b1603-b86f-414c-98bf-07653e47f929",
+      "name": "Sticky Note 88a68731",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## AI AGENT, MEMORY, RAG & TOOLS\\n\\nGemini agent uses Postgres chat memory, the `knowledge_base` RAG tool (pgvector table `knowledge_chunks`), and five customer/order tools. It must use tools for customer-specific data and ground policy answers in retrieved docs. Structured output = { intent, response, escalate, escalation_reason }.",
+        "height": 360,
+        "width": 460
+      },
+      "id": "238e2555-023c-4883-b298-bac8eae4085e",
+      "name": "Sticky Note 011e27fd",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## RESPONSE VALIDATION & SECURITY\\n\\nSanitizes the agent output, strips leaked secrets/prompt markers, and substitutes a safe fallback (escalate=true) when the output is empty or the agent errored. Prevents hallucinated info by relying on the tool-first system prompt.",
+        "height": 300,
+        "width": 400
+      },
+      "id": "6cf921e7-35be-4486-a186-9f114c254d48",
+      "name": "Sticky Note 757e6426",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ESCALATION\\n\\nWhen escalate=true: create a support ticket, email the support team, and tell the customer their request was forwarded to a human. Non-escalation skips ticket + email.",
+        "height": 280,
+        "width": 380
+      },
+      "id": "d70fafb6-6bd1-42bb-a5e7-5429ae196218",
+      "name": "Sticky Note 586b6de3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## LOGGING & OUTPUT\\n\\nStores the assistant message, writes a structured row to `support_logs`, and returns exactly `{ conversation_id, intent, response, escalated, ticket_id }`.",
+        "height": 260,
+        "width": 380
+      },
+      "id": "d43e64e9-7255-41fc-bcaa-6892029a3b01",
+      "name": "Sticky Note c41e9fe6",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0438d7fe-e61c-4d79-9cde-40b8a386b865",
+      "name": "Customer Message Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        416
+      ],
+      "webhookId": "51bb7035-8c73-4421-b72b-ee9103d09e97"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and normalize the incoming payload.\nconst body = ($input.first().json.body) || {};\nconst customer_id = (body.customer_id || '').toString().trim();\nlet conversation_id = (body.conversation_id || '').toString().trim();\nconst message = (body.message || '').toString().trim();\nconst valid = customer_id.length > 0 && message.length > 0;\nif (!conversation_id) {\n  conversation_id = 'conv-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\n}\nreturn [{ json: { customer_id, conversation_id, message, valid } }];"
+      },
+      "id": "aa10fc47-e12e-4e3e-a533-874ed3567d11",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cbd29f41-ad35-47dc-9829-a27dcc694d4c",
+      "name": "Is Payload Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO customers (customer_id) VALUES ($1) ON CONFLICT (customer_id) DO NOTHING;\nINSERT INTO conversations (conversation_id, customer_id) VALUES ($2, $1) ON CONFLICT (conversation_id) DO NOTHING;\nINSERT INTO messages (customer_id, conversation_id, role, message) VALUES ($1, $2, 'customer', $3);",
+        "options": {
+          "queryBatching": "transaction",
+          "queryReplacement": "={{ [$json.customer_id, $json.conversation_id, $json.message] }}"
+        }
+      },
+      "id": "175e32df-2774-4348-b5c8-68d79ddeee4e",
+      "name": "Store Inbound Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $(\"Validate Input\").item.json.message }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a medical patient-support assistant. Handle clinic policies, doctor availability, appointments, lab-result access, patient privacy, and support tickets only. For policy questions, always call the knowledge_base tool and ground the answer only in retrieved medical content. Never discuss retail, shopping, SaaS, orders, subscriptions, or unrelated company information. Never diagnose, prescribe, expose another patient's data, or reveal secrets. For emergencies, direct the patient to local emergency services immediately. Always return structured output: { intent, response, escalate, escalation_reason }."
+        }
+      },
+      "id": "14a585e9-0a01-4959-bb6f-51a39ad8a14c",
+      "name": "Support Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1344,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "id": "3b30c8e8-35f8-4e85-b4e5-9e6e06451025",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        16
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DNuTcP7td62fUKkT",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Validate Input').item.json.conversation_id }}",
+        "contextWindowLength": 10
+      },
+      "id": "28588cb1-5444-4c2d-8a76-e8ff0f0d7ef8",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        1024,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the medical clinic knowledge base for appointment, privacy, emergency-safety, lab-result, and clinic-support guidance. Use this for medical policy questions and ground answers ONLY in returned content. Never diagnose or prescribe.",
+        "tableName": "knowledge_chunks",
+        "options": {
+          "queryName": "match_medical_knowledge",
+          "columnNames": {
+            "values": {
+              "contentColumnName": "chunk_text",
+              "vectorColumnName": "embedding",
+              "metadataColumnName": "metadata"
+            }
+          }
+        }
+      },
+      "id": "ea4a2f74-c07b-47f3-8518-d0f6feac7d57",
+      "name": "knowledge_base",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "38ca504d-8652-4f76-9b7f-0a04319ee212",
+      "name": "Embeddings Google Gemini",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        432
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DNuTcP7td62fUKkT",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT customer_id, name, email, created_at FROM customers WHERE customer_id = '{{ $fromAI('customer_id', 'The customer ID to look up') }}';",
+        "options": {}
+      },
+      "id": "e5958f08-175a-40d8-90f8-f7607b19fdb9",
+      "name": "get_customer",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1280,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT order_id, status, total, updated_at FROM orders WHERE order_id = '{{ $fromAI('order_id', 'The order ID to look up') }}';",
+        "options": {}
+      },
+      "id": "aea2d315-a3f4-4f3c-ae72-02426c541e6d",
+      "name": "get_order_status",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1408,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT order_id, status, total, updated_at FROM orders WHERE customer_id = '{{ $fromAI('customer_id', 'The customer ID whose orders to list') }}' ORDER BY updated_at DESC;",
+        "options": {}
+      },
+      "id": "f03c4565-6569-4f56-a64d-13f003067a0c",
+      "name": "get_customer_orders",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1536,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO support_tickets (customer_id, issue, status) VALUES ('{{ $fromAI('customer_id', 'The customer ID') }}', '{{ $fromAI('issue', 'A short description of the issue') }}', 'open') RETURNING ticket_id;",
+        "options": {}
+      },
+      "id": "2a7dbdcb-956b-426d-8975-54116f6cfbb9",
+      "name": "create_support_ticket",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1664,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO support_tickets (customer_id, conversation_id, reason, status) VALUES ('{{ $fromAI('customer_id', 'The customer ID') }}', '{{ $fromAI('conversation_id', 'The conversation ID') }}', '{{ $fromAI('reason', 'Why human support is needed') }}', 'escalated') RETURNING ticket_id;",
+        "options": {}
+      },
+      "id": "3495bb15-be0f-40d7-877e-6508967420f6",
+      "name": "request_human_support",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1792,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"intent\":{\"type\":\"string\",\"enum\":[\"FAQ\",\"Product question\",\"Order status\",\"Refund\",\"Cancellation\",\"Complaint\",\"Technical support\",\"Human support\",\"Other\"]},\"response\":{\"type\":\"string\"},\"escalate\":{\"type\":\"boolean\"},\"escalation_reason\":{\"type\":\"string\"}},\"required\":[\"intent\",\"response\",\"escalate\"]}"
+      },
+      "id": "23ba87e6-50b3-4e52-8820-25d45b208485",
+      "name": "Support Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1920,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate/sanitize the agent output and produce a safe classification object.\nconst item = $input.first().json;\nconst vi = $('Validate Input').first().json;\nconst cls = item.output || null;\n\nlet intent = (cls && cls.intent) || 'Other';\nlet response = (cls && cls.response ? String(cls.response) : '');\nlet escalate = !!(cls && cls.escalate === true);\nlet reason = (cls && cls.escalation_reason) || null;\nlet errors = null;\n\n// Agent error output (no parsed output present) -> safe escalation\nif (!cls) {\n  escalate = true;\n  intent = 'Human support';\n  reason = 'AI processing failed';\n  const e = item.error;\n  errors = (e && (e.message || JSON.stringify(e))) || 'agent_error';\n  response = '';\n}\n\n// Security: strip any leaked secrets / prompt markers\nconst banned = [/sk-[A-Za-z0-9]{12,}/g, /api[_-]?key\\s*[:=]\\s*\\S+/gi, /system prompt/gi, /BEGIN [A-Z ]*PRIVATE KEY/gi];\nfor (const re of banned) { response = response.replace(re, '[redacted]'); }\n\n// Fallback when empty\nif (!response || !response.trim()) {\n  response = 'Sorry, I was unable to fully process your request. I am connecting you with a human support agent.';\n  escalate = true;\n  if (!reason) reason = 'empty_response';\n}\n\nreturn [{ json: {\n  conversation_id: vi.conversation_id,\n  customer_id: vi.customer_id,\n  intent,\n  response,\n  escalated: escalate,\n  escalation_reason: reason,\n  ticket_id: null,\n  errors,\n} }];"
+      },
+      "id": "11e391ae-bbcb-4f43-85bf-c0224e9d2eb2",
+      "name": "Response Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "escalated",
+              "leftValue": "={{ $json.escalated }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c4c24d06-9022-4b1f-bc0b-eb819e1e62b9",
+      "name": "Needs Escalation?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2352,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO support_tickets (customer_id, conversation_id, issue, reason, status) VALUES ($1, $2, $3, $4, 'escalated') RETURNING ticket_id;",
+        "options": {
+          "queryReplacement": "={{ [$json.customer_id, $json.conversation_id, $json.intent, $json.escalation_reason] }}"
+        }
+      },
+      "id": "9078a27e-2982-4e73-9e04-bf1f488b6d8b",
+      "name": "Create Escalation Ticket",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2576,
+        144
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "asmitregmi1991@gmail.com",
+        "toEmail": "asmit.cse24@cmrit.ac.in",
+        "subject": "=Escalation [{{ $(\"Response Validation\").item.json.intent }}] - conversation {{ $(\"Response Validation\").item.json.conversation_id }}",
+        "html": "=<h3>Customer support escalation</h3><p><b>Customer:</b> {{ $(\"Response Validation\").item.json.customer_id }}</p><p><b>Conversation:</b> {{ $(\"Response Validation\").item.json.conversation_id }}</p><p><b>Intent:</b> {{ $(\"Response Validation\").item.json.intent }}</p><p><b>Reason:</b> {{ $(\"Response Validation\").item.json.escalation_reason }}</p><p><b>Ticket:</b> {{ $json.ticket_id }}</p><p><b>Last customer message:</b> {{ $(\"Validate Input\").item.json.message }}</p>",
+        "options": {}
+      },
+      "id": "9c47003b-6895-4676-81d1-3fc680062308",
+      "name": "Notify Support Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2800,
+        144
+      ],
+      "webhookId": "d7e9d27c-0a07-4d96-97e2-a3b60e95358f",
+      "credentials": {
+        "smtp": {
+          "id": "pnb6aOdedagQ83tq",
+          "name": "SMTP account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the final response object for storage, logging, and the webhook reply.\nconst rv = $('Response Validation').first().json;\nlet ticket_id = rv.ticket_id != null ? rv.ticket_id : null;\ntry {\n  const t = $('Create Escalation Ticket').first().json;\n  if (t && t.ticket_id != null) ticket_id = t.ticket_id;\n} catch (e) { /* not escalated */ }\n\nlet response = rv.response || '';\nif (rv.escalated && !/human/i.test(response)) {\n  response = (response ? response + ' ' : '') + 'Your request has been forwarded to a human support agent who will follow up shortly.';\n}\n\nreturn [{ json: {\n  conversation_id: rv.conversation_id,\n  customer_id: rv.customer_id,\n  intent: rv.intent,\n  response,\n  escalated: !!rv.escalated,\n  ticket_id,\n  errors: rv.errors || null,\n} }];"
+      },
+      "id": "5c697330-19e4-45ed-a0e9-2d2f9df7c814",
+      "name": "Assemble Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3024,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO messages (customer_id, conversation_id, role, message) VALUES ($1, $2, 'assistant', $3);",
+        "options": {
+          "queryReplacement": "={{ [$json.customer_id, $json.conversation_id, $json.response] }}"
+        }
+      },
+      "id": "759c5c19-0319-4dfa-91c7-45cdd5760edc",
+      "name": "Store Outbound Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        3248,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO support_logs (customer_id, conversation_id, intent, retrieved_docs, tools_used, response, escalated, ticket_id, errors) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);",
+        "options": {
+          "queryReplacement": "={{ [ $(\"Assemble Final Response\").item.json.customer_id, $(\"Assemble Final Response\").item.json.conversation_id, $(\"Assemble Final Response\").item.json.intent, null, null, $(\"Assemble Final Response\").item.json.response, $(\"Assemble Final Response\").item.json.escalated, $(\"Assemble Final Response\").item.json.ticket_id, $(\"Assemble Final Response\").item.json.errors ] }}"
+        }
+      },
+      "id": "a31b46a9-07b6-4226-b8a2-c3badefb2214",
+      "name": "Log Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        3472,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"conversation_id\": $(\"Assemble Final Response\").item.json.conversation_id, \"intent\": $(\"Assemble Final Response\").item.json.intent, \"response\": $(\"Assemble Final Response\").item.json.response, \"escalated\": $(\"Assemble Final Response\").item.json.escalated, \"ticket_id\": $(\"Assemble Final Response\").item.json.ticket_id } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "0fab95aa-8062-4bfc-b45b-20273b72ca0c",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3696,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO support_logs (customer_id, conversation_id, intent, response, escalated, errors) VALUES ($1, $2, 'error', 'invalid payload', false, 'missing customer_id or message');",
+        "options": {
+          "queryReplacement": "={{ [$json.customer_id, $json.conversation_id] }}"
+        }
+      },
+      "id": "e19527d3-e95e-4f7d-bac5-ded55452018b",
+      "name": "Log Invalid Payload",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        608
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"conversation_id\": $(\"Validate Input\").item.json.conversation_id, \"intent\": \"error\", \"response\": \"We could not process your request. Please include a message and a customer id.\", \"escalated\": false, \"ticket_id\": null } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a4b7b7f8-0cd1-4224-a2e3-bf5a68a54864",
+      "name": "Respond 400 (Invalid)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1408,
+        608
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Customer Message Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Payload Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Payload Valid?": {
+      "main": [
+        [
+          {
+            "node": "Store Inbound Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Invalid Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Inbound Message": {
+      "main": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support Agent": {
+      "main": [
+        [
+          {
+            "node": "Response Validation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "knowledge_base",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_support_ticket": {
+      "ai_tool": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "request_human_support": {
+      "ai_tool": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Validation": {
+      "main": [
+        [
+          {
+            "node": "Needs Escalation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Escalation?": {
+      "main": [
+        [
+          {
+            "node": "Create Escalation Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Assemble Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Escalation Ticket": {
+      "main": [
+        [
+          {
+            "node": "Notify Support Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Support Team": {
+      "main": [
+        [
+          {
+            "node": "Assemble Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Final Response": {
+      "main": [
+        [
+          {
+            "node": "Store Outbound Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Outbound Message": {
+      "main": [
+        [
+          {
+            "node": "Log Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Request": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Invalid Payload": {
+      "main": [
+        [
+          {
+            "node": "Respond 400 (Invalid)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7da04be9-8a65-438a-a728-38d2e949d53b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "56a901806807cb05a65d96a7fc39ef002b611f6a80cb20360222d4d8ce6ffecb"
+  },
+  "nodeGroups": [],
+  "id": "kgiLNUOh4ZZJ5lia",
+  "tags": []
+}
