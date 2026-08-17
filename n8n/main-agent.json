@@ -266,7 +266,7 @@
     },
     {
       "parameters": {
-        "modelName": "models/text-embedding-004",
+        "modelName": "models/gemini-embedding-001",
         "options": {}
       },
       "id": "a7dfc6d4-dce2-40a8-8d39-c50f9a6da2fe",
