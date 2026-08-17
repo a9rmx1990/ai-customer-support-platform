@@ -17,7 +17,7 @@ export default function ArchitecturePage() {
     {
       step: '02',
       title: 'Next.js API Gateway',
-      subtitle: 'POST /api/chat Proxy',
+      subtitle: 'POST /api/clinical-chat Gateway',
       desc: 'Validates payload, enforces domain context, hides API credentials server-side, and proxies payload to n8n Webhook.',
       icon: ShieldCheck,
       badge: 'API Gateway',
@@ -222,4 +222,3 @@ export default function ArchitecturePage() {
     </div>
   );
 }
-
