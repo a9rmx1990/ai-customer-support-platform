@@ -15,7 +15,7 @@ export default function ChatWidget() {
       id: 'welcome-1',
       conversation_id: 'conv-init',
       role: 'assistant',
-      content: 'Hello! I am your medical support assistant. How can I help you today?',
+      content: 'Hello! I am your Clinical AI Medical Assistant. I can provide general medical information and help with clinic coordination. How can I help?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       intent: 'Greeting',
     },
@@ -52,7 +52,7 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const res = await apiFetch('/api/chat', {
+      const res = await apiFetch('/api/clinical-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,7 +81,7 @@ export default function ChatWidget() {
         id: `msg-err-${Date.now()}`,
         conversation_id: conversationId,
         role: 'assistant',
-        content: "We're having trouble connecting to support right now. Please try again in a moment.",
+        content: "The clinical assistant is temporarily unavailable. Please contact your clinic directly if you need medical help.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         intent: 'error',
       };
@@ -116,10 +116,10 @@ export default function ChatWidget() {
               </div>
               <div>
                 <h3 className="font-display font-bold text-xs text-white flex items-center gap-1.5">
-                  AutoSupport Assistant
+                  Clinical AI Medical Assistant
                   <span className="w-1.5 h-1.5 rounded-full bg-clinical-mint" />
                 </h3>
-                <p className="text-[10px] font-mono text-gray-400">n8n Agent • RAG Grounded</p>
+                <p className="text-[10px] font-mono text-gray-400">Gemini • Medical RAG</p>
               </div>
             </div>
 
@@ -134,24 +134,24 @@ export default function ChatWidget() {
           {/* Quick Prompts Bar */}
           <div className="bg-surface-base px-3 py-1.5 border-b border-triage-border flex gap-1.5 overflow-x-auto text-[11px] font-mono scrollbar-none">
             <button
-              onClick={() => handleSendMessage('Book an appointment with Dr. Sarah Jenkins')}
+              onClick={() => handleSendMessage('How should I prepare for a medical appointment?')}
               className="px-2 py-1 rounded bg-surface-elevated text-gray-300 hover:text-clinical-mint border border-triage-border shrink-0 flex items-center gap-1 transition-colors"
             >
-              <span>Book Doctor</span>
+                <span>Appointment advice</span>
               <ChevronRight className="w-3 h-3 text-gray-500" />
             </button>
             <button
-              onClick={() => handleSendMessage('Where is order #ORD-5001?')}
+              onClick={() => handleSendMessage('What symptoms require emergency care?')}
               className="px-2 py-1 rounded bg-surface-elevated text-gray-300 hover:text-signal-amber border border-triage-border shrink-0 flex items-center gap-1 transition-colors"
             >
-              <span>Order #ORD-5001</span>
+                <span>Emergency guidance</span>
               <ChevronRight className="w-3 h-3 text-gray-500" />
             </button>
             <button
               onClick={() => handleSendMessage('I need human support.')}
               className="px-2 py-1 rounded bg-surface-elevated text-gray-300 hover:text-signal-violet border border-triage-border shrink-0 flex items-center gap-1 transition-colors"
             >
-              <span>Human Agent</span>
+                <span>Contact clinic</span>
               <ChevronRight className="w-3 h-3 text-gray-500" />
             </button>
           </div>
@@ -209,7 +209,7 @@ export default function ChatWidget() {
                 <div className="w-5 h-5 rounded bg-surface-elevated flex items-center justify-center text-clinical-mint">
                   <RefreshCw className="w-3 h-3 animate-spin" />
                 </div>
-                <span>Executing tool triage...</span>
+                <span>Retrieving clinical guidance...</span>
               </div>
             )}
 
