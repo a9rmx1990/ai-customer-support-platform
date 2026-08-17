@@ -1,0 +1,292 @@
+{
+  "name": "Support System - RAG Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1. Document Source (replaceable)\\n\\n`Company Documents (Source)` emits one item per document `{ title, category, text }`. Swap it for an HTTP Request, Google Drive, or Extract from File source without changing the rest of the pipeline.",
+        "height": 260,
+        "width": 360
+      },
+      "id": "cfdd608e-2b7f-4386-8699-21f942ca4325",
+      "name": "Sticky Note 9997ed57",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Chunk -> Embed -> Store (RAG)\\n\\nEmpty documents are skipped. Each document is chunked (Recursive splitter, 800/100), embedded with OpenAI `text-embedding-3-small` (1536 dims), and upserted into **pgvector table `knowledge_chunks`** (content column `chunk_text`, metadata carries `title` + `category`).\\n\\n**The main support agent retrieval tool MUST use table `knowledge_chunks`.**",
+        "height": 300,
+        "width": 420
+      },
+      "id": "5b32cfc3-19e1-4daf-8519-d246723e6f4d",
+      "name": "Sticky Note 86698552",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        880
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "f5113d63-faf2-483f-8a85-1676a9b62396",
+      "name": "Run Ingestion",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// AI Medical Customer Support Platform\n// \"Company Documents (Source)\" — n8n Code Node\n//\n// PURPOSE:\n//   Provides structured medical knowledge documents for the\n//   RAG ingestion pipeline. Each document is chunked by the\n//   downstream Recursive Splitter, embedded via\n//   models/gemini-embedding-2 (768-dim), and stored in\n//   public.knowledge_chunks via pgvector.\n//\n// SAFETY POLICY:\n//   - Content is conservative and patient-safety-oriented.\n//   - This assistant does NOT diagnose, prescribe, or replace\n//     a licensed clinician.\n//   - Emergency situations always direct users to call local\n//     emergency services (e.g. 911 in the US) immediately.\n//   - No fabricated citations or claimed authority sources.\n// ============================================================\n\nconst docs = [\n\n  // ─────────────────────────────────────────────────────────\n  // 1. EMERGENCY SITUATIONS AND ESCALATION\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Emergency Situations — When to Call Emergency Services Immediately',\n    category: 'Emergency',\n    text: `\nIMPORTANT: This AI assistant cannot handle medical emergencies.\nIf you or someone near you is experiencing a life-threatening situation,\nstop using this assistant and contact your local emergency services immediately\n(e.g., 911 in the United States, 999 in the UK, 112 in the EU).\n\nALWAYS CALL EMERGENCY SERVICES FOR:\n- Chest pain, pressure, tightness, or pain spreading to the arm, jaw, or back\n- Sudden difficulty breathing or inability to breathe\n- Signs of stroke: sudden face drooping, arm weakness, slurred or confused speech, sudden severe headache, sudden vision loss (remember FAST: Face, Arms, Speech, Time)\n- Severe allergic reaction (anaphylaxis): throat swelling, inability to breathe, hives with dizziness\n- Uncontrolled or severe bleeding that does not stop with direct pressure\n- Loss of consciousness or unresponsiveness\n- Seizures (especially in someone with no seizure history, or prolonged seizures lasting more than 5 minutes)\n- Suspected poisoning or drug overdose — also contact Poison Control (1-800-222-1222 in the US)\n- Severe burns covering a large area, burns to the face, hands, feet, or genitals\n- High-impact trauma: car accidents, falls from height, suspected spinal injury\n- Sudden severe abdominal pain\n- Altered mental status: sudden confusion, extreme agitation, or unresponsiveness\n- Suicidal thoughts with intent or plan — call or text 988 (Suicide & Crisis Lifeline, US) or your local crisis line immediately\n\nDO NOT wait to see if symptoms improve. Do not drive yourself.\nTime-critical emergencies require immediate professional response.\n\nAfter calling emergency services, stay on the line and follow the dispatcher's instructions.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 2. SYMPTOMS AND WHEN TO SEEK URGENT CARE\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Symptoms — When to Seek Urgent Care vs. Emergency Care vs. Primary Care',\n    category: 'Symptoms',\n    text: `\nUnderstanding the right level of care helps you get help quickly and safely.\n\nEMERGENCY ROOM (ER) — Go immediately or call 911:\n- Chest pain or pressure\n- Difficulty breathing\n- Signs of stroke (FAST: Face drooping, Arm weakness, Speech difficulty, Time to call 911)\n- Severe uncontrolled bleeding\n- Loss of consciousness\n- Suspected broken bone with open wound or severe deformity\n- Severe allergic reaction\n- High fever with stiff neck and sensitivity to light (possible meningitis)\n- Severe abdominal pain\n\nURGENT CARE CENTER — Same day, no appointment needed:\n- Minor cuts that may need stitches\n- Sprains and minor fractures\n- Fever without severe symptoms\n- Urinary tract infection (UTI) symptoms: burning, frequent urination, pelvic pain\n- Ear or sinus pain\n- Mild to moderate asthma flare-up (if you have a rescue inhaler and a management plan)\n- Pink eye (conjunctivitis)\n- Skin rashes without severe symptoms\n- Vomiting or diarrhea that is persistent but not severe\n\nPRIMARY CARE / SCHEDULED APPOINTMENT — Contact your doctor:\n- Routine check-ups and preventive screenings\n- Chronic condition management (diabetes, hypertension, asthma)\n- Medication refills and follow-up care\n- Mild cold or flu symptoms that have been present for several days\n- Mental health concerns (anxiety, depression, mood changes)\n- Non-urgent test results or referrals\n\nTELEHEALTH — May be appropriate for:\n- Mild cold/flu symptom assessment\n- Prescription refills for established conditions\n- Mental health counseling\n- General medical questions\n- Follow-up after a recent visit\n\nIf you are unsure which level of care is right for you, contact your primary care physician's office or call a nurse advice line. Do not use this AI assistant as a substitute for clinical judgment.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 3. APPOINTMENT PREPARATION\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Appointment Preparation — How to Prepare for a Medical Visit',\n    category: 'Appointment',\n    text: `\nBeing well prepared for your medical appointment helps your provider give you the best care.\n\nBEFORE YOUR APPOINTMENT:\n\n1. Write down your symptoms:\n   - When did they start?\n   - How severe are they on a scale of 1–10?\n   - What makes them better or worse?\n   - Are they constant or intermittent?\n\n2. Prepare your medication list:\n   - Bring ALL medications, including prescriptions, over-the-counter medicines, vitamins, and supplements.\n   - Include medication name, dose, and how often you take it.\n   - Note any recent medication changes.\n\n3. Know your medical history:\n   - Past surgeries or hospitalizations\n   - Chronic conditions (e.g., diabetes, high blood pressure, asthma)\n   - Family history of major conditions (heart disease, cancer, diabetes)\n\n4. Bring relevant documents:\n   - Insurance card and photo ID\n   - Referral letter (if required by your insurance)\n   - Results from recent labs, imaging, or specialist visits\n   - A list of questions you want answered\n\n5. Write down your questions in order of priority. Appointments are time-limited, so list your most important concern first.\n\nDURING YOUR APPOINTMENT:\n- Be honest and complete. Your provider cannot help you fully without accurate information.\n- Ask for clarification if you don't understand something.\n- Ask: \"What should I do if my symptoms get worse?\"\n- Ask: \"Are there any warning signs I should watch for?\"\n\nAFTER YOUR APPOINTMENT:\n- Follow through on any referrals, labs, or imaging ordered.\n- Fill prescriptions and take medications as directed.\n- Schedule follow-up appointments before you leave, if recommended.\n- If you don't hear back about test results within the timeframe your provider mentioned, follow up proactively.\n\nBring a trusted family member or friend if you would like support during the visit.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 4. MEDICATION — GENERAL INFORMATION\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Medication — General Information for Patients',\n    category: 'Medication',\n    text: `\nIMPORTANT: This AI assistant does NOT prescribe medications, recommend specific doses, or substitute for your pharmacist or physician's guidance.\n\nGENERAL MEDICATION SAFETY PRINCIPLES:\n\nTaking medications safely:\n- Always take medications exactly as prescribed or as directed on the label.\n- Do not stop taking a prescription medication without talking to your provider, even if you feel better. Stopping some medications abruptly (e.g., steroids, antidepressants, beta-blockers, seizure medications) can cause serious complications.\n- Never take someone else's prescription medication.\n- Do not take more than the recommended dose to \"catch up\" if you miss a dose — consult your pharmacist or provider for guidance.\n\nUnderstanding your prescription:\n- \"Twice daily\" typically means every 12 hours.\n- \"With food\" usually means taking the medication with a meal to reduce stomach upset.\n- \"PRN\" means \"as needed\" — only take when the symptom is present.\n- Ask your pharmacist to explain any instructions you don't understand.\n\nCommon medication concerns:\n- Side effects: Many medications have listed side effects. Ask your provider or pharmacist which side effects are common and manageable vs. which require stopping the medication and calling for help.\n- Drug interactions: Always inform your provider and pharmacist of ALL medications and supplements you take to check for interactions.\n- Allergies: Report any known drug allergies before any new prescription is written. If you have an allergic reaction to a new medication (rash, swelling, difficulty breathing), seek medical attention immediately.\n- Generic vs. brand-name: Generic medications contain the same active ingredient at the same dose as brand-name medications and are FDA-approved to be equivalent.\n\nStoring medications:\n- Store most medications at room temperature, away from heat and moisture.\n- Some medications (e.g., certain insulins, some eye drops) must be refrigerated — check the label.\n- Keep medications out of reach of children.\n\nDisposing of medications:\n- Do not flush medications unless the label specifically says to.\n- Use local drug take-back programs or DEA-authorized collection sites.\n- If no program is available, mix unused medications with an undesirable substance (coffee grounds, dirt), place in a sealed container, and dispose in household trash.\n\nIf you suspect a medication error or overdose, contact Poison Control immediately: 1-800-222-1222 (US) or call emergency services.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 5. COMMON PATIENT FAQs\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Common Patient FAQs — General Medical Questions',\n    category: 'FAQ',\n    text: `\nQ: Can this AI assistant diagnose my condition?\nA: No. This assistant cannot diagnose medical conditions. It provides general health information to support your understanding, but a diagnosis requires examination and assessment by a licensed clinician. Please consult your doctor.\n\nQ: Can I get a prescription through this assistant?\nA: No. Prescriptions can only be issued by licensed healthcare providers after a proper clinical assessment. This assistant does not have that capability.\n\nQ: How do I find a primary care physician?\nA: Contact your health insurance provider for an in-network list of primary care physicians. You can also search the internet for \"find a primary care doctor near me\" or use your insurance company's online provider directory. Community health centers can serve patients regardless of insurance status.\n\nQ: What do I do if I can't afford my medication?\nA: Speak with your provider — they may be able to prescribe a lower-cost alternative. Ask your pharmacist about generic equivalents. Many pharmaceutical manufacturers offer patient assistance programs. GoodRx and similar services can reduce costs at the pharmacy. Community health centers and free clinics may also help.\n\nQ: How long does it typically take to get an appointment?\nA: This varies widely by provider, specialty, and location. For urgent matters, ask for the earliest available slot or visit urgent care. For non-urgent issues, new patient appointments with specialists may take weeks to months.\n\nQ: I received test results but can't reach my doctor. What should I do?\nA: If the results seem normal or you are not sure, leave a message or use your patient portal to send a message to your provider's office. If results show something concerning or you are experiencing new or worsening symptoms, contact the office directly or visit urgent care. For emergencies, go to the ER.\n\nQ: Is it safe to look up symptoms online?\nA: General health information online can be useful, but it is easy to misinterpret symptoms. Use reputable sources (e.g., Mayo Clinic, CDC, NIH MedlinePlus). Avoid making clinical decisions based solely on internet searches. When in doubt, contact your healthcare provider.\n\nQ: What is a patient portal and how do I use it?\nA: A patient portal is a secure online platform where you can view your health records, test results, appointment history, and send non-urgent messages to your care team. Ask your provider's office how to register for their portal.\n\nQ: Can I ask this assistant about my child's health?\nA: This assistant provides general health information. For a child's specific health concerns, always consult a pediatrician or appropriate specialist. For emergencies involving children, call 911 immediately.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 6. PREVENTIVE CARE AND GENERAL HEALTH\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Preventive Care — General Health Recommendations for Adults',\n    category: 'Preventive Care',\n    text: `\nPreventive care helps detect health problems early and reduces the risk of serious illness.\nThis information is general in nature. Your provider will tailor recommendations to your age,\nsex, family history, and personal health profile.\n\nROUTINE SCREENINGS (general adult guidance — discuss specifics with your doctor):\n\nBlood pressure: Checked at most routine visits. High blood pressure (hypertension) often has no symptoms. Adults should have it checked at least every 1–2 years; more often if elevated.\n\nCholesterol: Typically checked every 4–6 years in low-risk adults starting around age 20, and more frequently as you age or if risk factors are present.\n\nBlood glucose / diabetes screening: Recommended for adults aged 35–70 who are overweight or obese, or earlier if risk factors exist.\n\nColorectal cancer screening: Typically begins at age 45 for average-risk adults. Options include colonoscopy, stool-based tests, or CT colonography — discuss with your provider.\n\nBreast cancer screening (mammogram): Recommendations vary by organization. Generally discussed starting at age 40–50 depending on individual risk. Talk to your provider about the right time for you.\n\nCervical cancer screening (Pap smear / HPV test): Generally recommended every 3–5 years for women ages 21–65, depending on test type and history.\n\nLung cancer screening: Low-dose CT scan recommended for adults ages 50–80 with a significant smoking history who currently smoke or quit within the past 15 years.\n\nVision and hearing: Regular checks are recommended, especially as you age.\n\nVACCINATIONS:\nStay current with recommended vaccinations, including:\n- Annual influenza (flu) vaccine\n- COVID-19 vaccines and boosters per current public health guidance\n- Tdap (tetanus, diphtheria, pertussis) booster every 10 years\n- Shingles vaccine (Shingrix) for adults 50 and older\n- Pneumococcal vaccines for adults 65 and older or those with certain conditions\n- HPV vaccine up to age 26 (and through 45 in some cases)\n\nLIFESTYLE HABITS FOR GENERAL HEALTH:\n- Aim for at least 150 minutes of moderate-intensity aerobic activity per week.\n- Eat a balanced diet rich in vegetables, fruits, whole grains, and lean proteins.\n- Maintain a healthy weight; even modest weight loss reduces health risks.\n- Do not smoke; seek support if you want to quit.\n- Limit alcohol: no more than 1 drink/day for women, 2 for men is the general guideline.\n- Get adequate sleep (7–9 hours for most adults).\n- Manage stress through healthy coping strategies.\n- Maintain regular dental and eye care appointments.\n\nAlways discuss your individual screening schedule with your primary care provider.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 7. NAVIGATING HEALTHCARE SERVICES\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Navigating Healthcare Services — Understanding the US Healthcare System',\n    category: 'Healthcare Navigation',\n    text: `\nHealthcare systems can be complex. Here is a general guide to help you understand and navigate common situations.\n\nTYPES OF HEALTHCARE PROVIDERS:\n- Primary Care Physician (PCP): Your main doctor for routine care, preventive visits, and managing chronic conditions. Often the first contact point and a gateway to specialist referrals.\n- Specialist: A physician with advanced training in a specific area (e.g., cardiologist for heart, dermatologist for skin, orthopedist for bones and joints).\n- Nurse Practitioner (NP) / Physician Assistant (PA): Advanced practice providers who can diagnose and treat many conditions, often working alongside or independently of physicians.\n- Pharmacist: A healthcare professional who dispenses medications, reviews your medication list for interactions, and can answer many medication-related questions.\n- Urgent Care: Walk-in clinics for non-life-threatening conditions that need same-day attention.\n- Emergency Department (ED/ER): For serious, potentially life-threatening emergencies.\n- Telehealth: Virtual visits via video or phone for appropriate, lower-acuity concerns.\n\nUNDERSTANDING INSURANCE:\n- Premium: Monthly payment to maintain your insurance coverage.\n- Deductible: Amount you pay out-of-pocket before insurance begins to cover costs.\n- Copay: A fixed amount you pay at the time of a visit (e.g., $30 per visit).\n- Coinsurance: Your share of costs after meeting the deductible (e.g., you pay 20%, insurance pays 80%).\n- Out-of-pocket maximum: The most you pay in a plan year — after this, insurance covers 100%.\n- In-network vs. Out-of-network: Using in-network providers costs less. Out-of-network care may not be covered or may cost significantly more.\n- Prior authorization: Some procedures, medications, or specialist visits require advance approval from your insurer.\n- Referral: Some plans require your PCP to refer you to a specialist before the visit is covered.\n\nGETTING CARE WITHOUT INSURANCE:\n- Federally Qualified Health Centers (FQHCs) offer sliding-scale fees based on income.\n- Free clinics exist in many communities.\n- Medicaid may be available if you meet income requirements.\n- Hospital financial assistance (charity care) programs can reduce or eliminate costs.\n- Healthcare.gov allows enrollment in marketplace plans during open or special enrollment periods.\n\nPATIENT RIGHTS:\n- You have the right to receive a clear explanation of your diagnosis, treatment options, and risks.\n- You have the right to refuse treatment.\n- You have the right to privacy and confidentiality of your health information (HIPAA).\n- You have the right to request a second opinion.\n- You have the right to receive an itemized bill and dispute billing errors.\n\nHOW TO REQUEST RECORDS:\nContact your provider's office or patient portal to request medical records. Under HIPAA, providers must respond within 30 days.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 8. WHEN TO CONTACT YOUR DOCTOR\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'When to Contact Your Doctor — Non-Emergency Symptoms and Concerns',\n    category: 'When to Seek Care',\n    text: `\nNot every health concern requires an emergency room visit, but many situations warrant contacting your doctor promptly.\nUse the following as a general guide only — when in doubt, call your provider.\n\nCONTACT YOUR DOCTOR WITHIN 24–48 HOURS FOR:\n- Fever over 103°F (39.4°C) in adults that is not responding to over-the-counter fever reducers\n- Persistent vomiting or diarrhea (more than 24–48 hours) with difficulty staying hydrated\n- Worsening pain that is not responding to appropriate home care\n- New or unusual rash, especially if spreading or accompanied by fever\n- Sudden changes in vision (blurring, double vision, floaters) — seek same-day or emergency care\n- Worsening shortness of breath in someone with a known respiratory condition\n- Signs of infection in a wound: increasing redness, warmth, swelling, pus, or red streaking\n- Unexpected weight loss (more than 5% of body weight without trying)\n- Blood in urine or stool (unless already diagnosed and monitored)\n- Unexplained swelling in legs or feet\n- Mental health changes: new or worsening depression, anxiety, or thoughts of self-harm\n\nCONTACT YOUR DOCTOR WITHIN A FEW DAYS FOR:\n- Mild to moderate cold or flu symptoms not improving after 7–10 days\n- Ear pain\n- Sore throat without severe difficulty swallowing\n- Mild urinary symptoms\n- Persistent cough lasting more than 2–3 weeks\n- Skin concerns: new moles, changing spots, or skin irritation\n- Recurrent headaches\n- Medication questions or concerns about side effects\n- Routine prescription refills (contact before you run out)\n\nWHEN A MESSAGE VIA PATIENT PORTAL IS APPROPRIATE:\n- Non-urgent questions about your care plan\n- Clarifying instructions from a recent visit\n- Requesting referrals\n- Reviewing test results you've already received\n- Administrative requests (records, forms)\n\nTRUST YOUR INSTINCTS: If something feels seriously wrong, seek care. It is always better to have a concern evaluated and be reassured than to delay care when it is needed.\n\nCHILDREN: Lower thresholds apply for infants and young children. Contact a pediatrician promptly for:\n- Any fever in an infant under 3 months\n- Fever over 102.2°F (39°C) in children under 2\n- Difficulty breathing, unusual lethargy, or refusal to eat/drink\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 9. MENTAL HEALTH AND CRISIS RESOURCES\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Mental Health — General Information and Crisis Resources',\n    category: 'Mental Health',\n    text: `\nMental health is an essential part of overall health. Seeking help is a sign of strength, not weakness.\n\nCOMMON MENTAL HEALTH CONDITIONS (general awareness only — not a diagnostic guide):\n- Depression: Persistent sadness, loss of interest in activities, fatigue, changes in sleep or appetite, difficulty concentrating. Treatable with therapy, medication, or both.\n- Anxiety disorders: Excessive worry, fear, panic, physical symptoms (racing heart, shortness of breath). Highly treatable.\n- Post-Traumatic Stress Disorder (PTSD): Can develop after a traumatic event. Symptoms include flashbacks, avoidance, emotional numbness, hypervigilance.\n- Bipolar disorder: Episodes of depression and mania or hypomania; requires professional diagnosis and management.\n- Substance use disorders: Can affect mental and physical health; effective treatments exist.\n\nHOW TO GET MENTAL HEALTH SUPPORT:\n- Talk to your primary care physician — they can screen you and refer you to mental health professionals.\n- Ask for a referral to a therapist, psychologist, or psychiatrist.\n- Community mental health centers often offer sliding-scale or free services.\n- Telehealth mental health services are widely available.\n- Check your insurance for in-network mental health providers.\n\nCRISIS RESOURCES (US):\n- 988 Suicide & Crisis Lifeline: Call or text 988 (24/7)\n- Crisis Text Line: Text HOME to 741741 (24/7)\n- Veterans Crisis Line: Call 988, then press 1; or text 838255\n- SAMHSA National Helpline (substance use): 1-800-662-4357 (free, confidential, 24/7)\n- National Domestic Violence Hotline: 1-800-799-7233\n\nIF SOMEONE IS IN IMMEDIATE DANGER OF HARMING THEMSELVES OR OTHERS:\nCall 911 or your local emergency number immediately.\n\nThis assistant is not equipped to provide mental health counseling or crisis intervention.\nIf you are in distress, please reach out to a crisis line or emergency services.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 10. LIMITATIONS OF THIS AI ASSISTANT\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'AI Assistant Limitations — What This Assistant Can and Cannot Do',\n    category: 'AI Limitations',\n    text: `\nThis AI medical support assistant is designed to provide general health information and help you navigate healthcare resources.\nUnderstanding what it can and cannot do will help you use it safely and effectively.\n\nWHAT THIS ASSISTANT CAN DO:\n- Provide general health education and information\n- Help you understand common medical terms\n- Explain what to expect during common procedures or appointments\n- Guide you on when to seek different levels of care (urgent care, ER, primary care)\n- Summarize general preventive care recommendations\n- Help you prepare questions for your provider\n- Point you to appropriate resources and crisis lines\n- Help you understand how to navigate healthcare systems\n\nWHAT THIS ASSISTANT CANNOT DO:\n- Diagnose any medical condition\n- Prescribe or recommend specific medications or dosages\n- Interpret your personal test results, images, or medical records\n- Replace a licensed physician, nurse practitioner, pharmacist, or other clinician\n- Provide real-time monitoring or alerts\n- Access your personal health records or electronic health record (EHR)\n- Guarantee the accuracy of information for your specific situation\n- Provide crisis counseling or emergency intervention\n\nIMPORTANT SAFETY DISCLAIMER:\nAll information provided by this assistant is for general educational purposes only.\nIt does not constitute medical advice, diagnosis, or treatment.\nAlways consult a qualified healthcare provider with questions about your specific health condition.\nDo not delay seeking professional medical advice because of information you received from this assistant.\nIn an emergency, call 911 or your local emergency number immediately.\n\nDATA AND PRIVACY:\nDo not share sensitive personal identifying information (Social Security numbers, full date of birth, insurance ID numbers) through this assistant beyond what is necessary to route your question to the right resource.\nHealthcare-specific privacy protections may vary by platform. Consult the platform's privacy policy for details.\n\nACCURACY:\nMedical knowledge evolves rapidly. While this assistant is updated to reflect general current practice, it may not reflect the most recent guidelines or research.\nAlways verify important health decisions with a current, qualified clinician.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 11. CHRONIC CONDITION MANAGEMENT — GENERAL GUIDANCE\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Chronic Condition Management — Living Well with a Long-Term Health Condition',\n    category: 'Chronic Care',\n    text: `\nChronic conditions such as diabetes, hypertension, asthma, heart disease, and arthritis require ongoing management.\nThis assistant provides general information only — your care plan should be developed and supervised by your healthcare team.\n\nGENERAL PRINCIPLES FOR MANAGING CHRONIC CONDITIONS:\n\n1. Understand your condition:\n   - Learn what your condition is, how it progresses, and what affects it.\n   - Ask your provider for reliable educational resources.\n\n2. Stick to your treatment plan:\n   - Take medications as prescribed, even when you feel well.\n   - Attend all follow-up appointments.\n   - Do not change your treatment plan without consulting your provider.\n\n3. Monitor your health:\n   - Keep a log of relevant measurements (blood pressure, blood glucose, peak flow, weight).\n   - Know your target numbers and the thresholds that require you to contact your provider.\n   - Report any significant changes or new symptoms promptly.\n\n4. Lifestyle modifications matter:\n   - Diet, exercise, sleep, and stress management have a significant impact on most chronic conditions.\n   - Work with your provider or a care team (dietitian, physical therapist, health coach) to build a sustainable plan.\n\n5. Know your warning signs:\n   - Learn the symptoms that indicate your condition is worsening and require prompt care.\n   - For example: sudden shortness of breath in someone with heart failure or asthma requires immediate medical attention.\n\n6. Coordinate your care:\n   - Keep all providers informed of your complete medication list and medical history.\n   - Bring a medication list to every appointment.\n   - Make sure specialists communicate with your PCP.\n\n7. Mental health and chronic illness:\n   - Chronic illness can affect mental health. Depression and anxiety are more common in people with chronic conditions.\n   - Ask your provider about mental health screening and support as part of your overall care.\n\n8. Medication adherence tips:\n   - Use a pill organizer or set phone alarms as reminders.\n   - Refill prescriptions before they run out.\n   - If cost is a barrier, speak with your provider or pharmacist about alternatives.\n\nDO NOT adjust medication doses, stop medications, or try unverified supplements without consulting your healthcare team.\n    `.trim()\n  },\n\n  // ─────────────────────────────────────────────────────────\n  // 12. UNDERSTANDING MEDICAL TEST RESULTS\n  // ─────────────────────────────────────────────────────────\n  {\n    title: 'Understanding Medical Tests — What Patients Should Know',\n    category: 'Medical Tests',\n    text: `\nMedical tests help providers diagnose conditions, monitor your health, and guide treatment.\nThis assistant cannot interpret your personal test results. Please discuss all results with your provider.\n\nCOMMON TYPES OF TESTS:\n\nBlood tests:\n- Complete Blood Count (CBC): Measures red and white blood cells and platelets. Helps detect infection, anemia, and blood disorders.\n- Basic Metabolic Panel (BMP) / Comprehensive Metabolic Panel (CMP): Measures electrolytes, kidney function, liver enzymes, and blood glucose.\n- Lipid panel: Measures cholesterol and triglycerides.\n- HbA1c: Reflects average blood sugar control over the past 2–3 months; used to diagnose and monitor diabetes.\n- Thyroid function tests: Measure TSH and thyroid hormones to assess thyroid health.\n\nImaging:\n- X-ray: Used to visualize bones, lungs, and some soft tissue conditions.\n- Ultrasound: Uses sound waves to visualize organs, blood vessels, and pregnancy.\n- CT scan: Detailed cross-sectional imaging using X-rays; often used for trauma, chest, abdomen, and brain.\n- MRI: Detailed soft tissue imaging using magnetic fields; used for brain, spine, joints, and more.\n\nOther common tests:\n- Urinalysis: Analyzes urine for signs of infection, kidney disease, or diabetes.\n- Electrocardiogram (ECG/EKG): Records the heart's electrical activity; used to assess heart rhythm and detect heart attacks.\n- Spirometry: Measures lung function; used to diagnose asthma and COPD.\n- Pap smear / HPV test: Cervical cancer screening.\n\nWHAT DO \"NORMAL\" AND \"ABNORMAL\" MEAN?\n- Reference ranges represent values seen in the majority of healthy individuals. A result slightly outside the range may or may not be clinically significant.\n- Context matters: Your provider interprets results in the context of your symptoms, history, and other findings.\n- A single abnormal result rarely means the worst — follow up with your provider for context.\n\nHOW TO FOLLOW UP ON RESULTS:\n- Most providers notify patients of results via the patient portal, phone call, or letter.\n- If you haven't heard back within the expected timeframe, contact the office proactively.\n- Do not assume no news means good news — confirm how and when to expect results.\n\nNever make clinical decisions based on interpreting your own test results without provider guidance.\n    `.trim()\n  }\n\n];\n\n// ─────────────────────────────────────────────────────────\n// Validate and return — do not modify below this line\n// ─────────────────────────────────────────────────────────\n\n// Safety check: filter out any empty documents before returning\nconst validDocs = docs.filter(d =>\n  d && typeof d.title === 'string' && d.title.trim().length > 0 &&\n  typeof d.text === 'string' && d.text.trim().length > 0\n);\n\nreturn validDocs.map(d => ({ json: d }));"
+      },
+      "id": "d2fb7fa6-2f0e-457a-a1b8-b3d3aa0e61e1",
+      "name": "Company Documents (Source)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-text",
+              "leftValue": "={{ ($json.text || \"\").trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e9f2bb6b-ebfd-4efe-adb4-e23f2f353424",
+      "name": "Skip Empty Documents",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO knowledge_documents (title, category, source) VALUES ($1, $2, $3) RETURNING document_id;",
+        "options": {
+          "queryReplacement": "={{ [$json.title, $json.category, \"ingestion-workflow\"] }}"
+        }
+      },
+      "id": "02646a3d-f6e0-47bd-bf81-d61a42f86e57",
+      "name": "Record Document (knowledge_documents)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        960,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "RRLHCFT4OsxDukDv",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": "knowledge_chunks",
+        "options": {
+          "columnNames": {
+            "values": {
+                "contentColumnName": "chunk_text",
+                "vectorColumnName": "embedding",
+                "metadataColumnName": "metadata"
+            }
+          }
+        }
+      },
+      "id": "f0c6a992-e123-4476-824a-3b81c6d3fc36",
+      "name": "Store in pgvector (knowledge_chunks)",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        896,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LRnyUerL9jYEwG14",
+          "name": "SupaBase PostGres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "title",
+                "value": "={{ $json.title }}"
+              },
+              {
+                "name": "category",
+                "value": "={{ $json.category }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "dd6cde15-57b6-411b-b546-e0246dda96c1",
+      "name": "Document Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "chunkSize": 800,
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "id": "4704703d-c683-4a35-8f84-3809f82d55f8",
+      "name": "Recursive Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        832
+      ]
+    },
+    {
+      "parameters": {"modelName": "models/gemini-embedding-001"},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        912,
+        624
+      ],
+      "id": "daf43bfc-8f90-404f-bede-37aa4ed13adc",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DNuTcP7td62fUKkT",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Ingestion": {
+      "main": [
+        [
+          {
+            "node": "Company Documents (Source)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Company Documents (Source)": {
+      "main": [
+        [
+          {
+            "node": "Skip Empty Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Empty Documents": {
+      "main": [
+        [
+          {
+            "node": "Record Document (knowledge_documents)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Store in pgvector (knowledge_chunks)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Store in pgvector (knowledge_chunks)",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Document Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Store in pgvector (knowledge_chunks)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "19612533-7a1c-4894-a804-d54ba6830753",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "56a901806807cb05a65d96a7fc39ef002b611f6a80cb20360222d4d8ce6ffecb"
+  },
+  "nodeGroups": [],
+  "id": "u4DLITc6PdDeut7q",
+  "tags": []
+}
