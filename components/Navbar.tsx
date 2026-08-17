@@ -13,7 +13,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Home', icon: Bot },
-    { href: '/chat?domain=medical', label: 'Support Chat', icon: MessageSquare },
+    { href: '/chat?domain=medical', label: 'Clinical Assistant', icon: MessageSquare },
     { href: '/doctors', label: 'Doctors', icon: Users },
     { href: '/tickets', label: 'Tickets', icon: Ticket },
     ...(user?.role === 'doctor' || user?.role === 'admin' ? [{ href: '/knowledge', label: 'Knowledge', icon: Database }] : []),
@@ -35,7 +35,7 @@ export default function Navbar() {
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="font-display font-bold text-sm text-white tracking-tight leading-none group-hover:text-clinical-mint transition-colors">
-                AutoSupport AI
+                Clinical AI Medical Assistant
               </span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold badge-mint">
                 v2.4 Live
@@ -43,7 +43,7 @@ export default function Navbar() {
             </div>
             <span className="text-[10px] text-gray-400 font-mono tracking-wider uppercase flex items-center gap-1 mt-0.5">
               <Activity className="w-2.5 h-2.5 text-clinical-mint inline" />
-              <span>Multi-Domain AI Engine</span>
+              <span>Gemini + Medical RAG</span>
             </span>
           </div>
         </Link>
@@ -153,5 +153,4 @@ export default function Navbar() {
     </header>
   );
 }
-
 
