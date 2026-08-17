@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.knowledge_chunks (
   id BIGSERIAL PRIMARY KEY,
   document_id BIGINT REFERENCES public.knowledge_documents(document_id) ON DELETE CASCADE,
   chunk_text TEXT NOT NULL,
-  embedding vector(768) NOT NULL,
+  embedding vector(3072) NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -39,7 +39,7 @@ CREATE POLICY knowledge_chunks_doctors ON public.knowledge_chunks
   );
 
 CREATE OR REPLACE FUNCTION public.match_medical_knowledge(
-  query_embedding vector(768),
+  query_embedding vector(3072),
   match_threshold FLOAT DEFAULT 0.35,
   match_count INTEGER DEFAULT 5
 )
