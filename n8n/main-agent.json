@@ -238,9 +238,10 @@
     {
       "parameters": {
         "mode": "retrieve-as-tool",
-        "toolDescription": "Search the company knowledge base (FAQs, product docs, pricing, shipping, refund, cancellation, and terms). Use this for any policy, product, or general company question. Ground answers ONLY in the returned content.",
+        "toolDescription": "Search the medical clinic knowledge base for appointment, privacy, emergency-safety, and clinic-support guidance. Use this for policy and clinic questions. Ground answers ONLY in returned medical content; never use it to diagnose or prescribe.",
         "tableName": "knowledge_chunks",
         "options": {
+          "queryName": "match_medical_knowledge",
           "columnNames": {
             "values": {
               "contentColumnName": "chunk_text"
