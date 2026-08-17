@@ -552,7 +552,7 @@ function ChatPageContent() {
     setLoading(true);
 
     try {
-        const res = await apiFetch('/api/chat', {
+        const res = await apiFetch('/api/clinical-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
